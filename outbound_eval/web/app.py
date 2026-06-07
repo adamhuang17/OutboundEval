@@ -361,6 +361,8 @@ async def task_understand_start(request: LLMCompileRequest):
             understanding = await compiler.compile(
                 raw_markdown=request.instruction,
                 model_config=request.llm_config,
+                stage_callback=_on_compile_stage,
+                compile_id=compile_id,
             )
 
             await _push({"type": "stage", "stage": "compile_qa", "message": "正在校验编译结果"})
