@@ -368,16 +368,31 @@ async def task_understand_start(request: LLMCompileRequest):
             await _push({"type": "stage", "stage": "compile_qa", "message": "正在校验编译结果"})
             compile_qa = CompileQAGate().validate(understanding)
             understanding_payload = understanding.model_dump(mode="json")
+            diagnostics = [item.model_dump(mode="json") for item in compiler.last_diagnostics]
             persist_error = _safe_upsert_json(
                 "task_understandings",
                 understanding.task_spec.get("task_id", compile_id),
                 understanding_payload,
+            )
+            _safe_upsert_json(
+                "compile_artifacts",
+                f"{compile_id}.task_understanding",
+                {
+                    "compile_id": compile_id,
+                    "task_id": understanding.task_spec.get("task_id", ""),
+                    "understanding": understanding_payload,
+                    "compile_qa": compile_qa.model_dump(mode="json"),
+                    "diagnostics": diagnostics,
+                    "stage_results": compiler.last_stage_results,
+                },
             )
             payload = {
                 "ok": compile_qa.passed,
                 "compile_id": compile_id,
                 "understanding": understanding_payload,
                 "compile_qa": compile_qa.model_dump(mode="json"),
+                "compile_diagnostics": diagnostics,
+                "compile_stage_results": compiler.last_stage_results,
                 "error": None if compile_qa.passed else "CompileQAGate blocked this task understanding.",
                 "persist_error": persist_error,
                 "elapsed_ms": int((time.perf_counter() - started) * 1000),
@@ -449,6 +464,25 @@ async def task_understand_result(compile_id: str):
             "error": "Compile job is still running or does not exist.",
         }
     return result
+
+
+@app.get("/api/task/understand/{compile_id}/diagnostics")
+async def task_understand_diagnostics(compile_id: str):
+    result = _compile_results.get(compile_id) or {}
+    diagnostics = result.get("compile_diagnostics")
+    stage_results = result.get("compile_stage_results")
+    if diagnostics is None:
+        diagnostics = [
+            item
+            for item in repo.list_json("compile_diagnostics")
+            if str(item.get("compile_id", "") or "").startswith(compile_id)
+        ]
+    return {
+        "ok": bool(diagnostics or stage_results),
+        "compile_id": compile_id,
+        "diagnostics": diagnostics or [],
+        "stage_results": stage_results or {},
+    }
 
 
 @app.post("/api/scenarios/build")
