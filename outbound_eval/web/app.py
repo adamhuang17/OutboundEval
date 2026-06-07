@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,6 +31,7 @@ from outbound_eval.domain.schemas_understanding import (
     ScenarioSpec as LLMScenarioSpec,
     TaskUnderstanding,
 )
+from outbound_eval.llm.structured_client import StructuredLLMClient, model_runtime_profile
 from outbound_eval.golden import GoldenSetService
 from outbound_eval.planner import CoveragePlanner
 from outbound_eval.planner.scenario_planner_llm import ScenarioPlannerLLM
@@ -58,6 +60,21 @@ redis_state = RedisStateStore(settings().redis_url)
 # In-memory run state store (用于 SSE 推送)
 _run_events: dict[str, list[dict]] = {}
 _run_locks: dict[str, asyncio.Lock] = {}
+_compile_events: dict[str, list[dict]] = {}
+_compile_locks: dict[str, asyncio.Lock] = {}
+_compile_results: dict[str, dict[str, Any]] = {}
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _safe_upsert_json(table: str, item_id: str, payload: dict[str, Any]) -> str | None:
+    try:
+        repo.upsert_json(table, item_id, payload)
+        return None
+    except Exception as exc:
+        return str(exc)
 
 # ---------- 请求/响应 schema ----------
 
@@ -80,6 +97,12 @@ class CompileRequest(BaseModel):
 class LLMCompileRequest(BaseModel):
     instruction: str
     llm_config: ModelConfig
+
+
+class PersonaProfileRequest(BaseModel):
+    id: str | None = None
+    name: str = Field(min_length=1, max_length=80)
+    persona: EvaluatorPersonaInput = Field(default_factory=EvaluatorPersonaInput)
 
 
 class BuildScenariosRequest(BaseModel):
@@ -155,41 +178,110 @@ async def health() -> dict:
 async def test_all_models(request: TestAllModelsRequest):
     """同时测试四个 LLM 角色配置，全部通过才返回 ok=True。"""
     adapter = OpenAICompatibleAdapter()
-    results = await asyncio.gather(
-        adapter.test_connection(request.configs.compiler_model),
-        adapter.test_connection(request.configs.target_model),
-        adapter.test_connection(request.configs.simulator_model),
-        adapter.test_connection(request.configs.judge_model),
-        return_exceptions=True,
-    )
-    compiler_r = results[0] if not isinstance(results[0], Exception) else None
-    target_r = results[1] if not isinstance(results[1], Exception) else None
-    simulator_r = results[2] if not isinstance(results[2], Exception) else None
-    judge_r = results[3] if not isinstance(results[3], Exception) else None
+    structured = StructuredLLMClient()
+    role_configs = [
+        ("compiler", request.configs.compiler_model),
+        ("target", request.configs.target_model),
+        ("simulator", request.configs.simulator_model),
+        ("judge", request.configs.judge_model),
+    ]
 
-    def _fmt(r, label):
-        if r is None:
-            return {"role": label, "ok": False, "error": "exception"}
-        return {"role": label, "ok": r.ok, "latency_ms": r.latency_ms, "error": r.error_message}
+    async def _probe(role: str, config: ModelConfig) -> dict[str, Any]:
+        conn = await adapter.test_connection(config)
+        profile = model_runtime_profile(config)
+        if conn.ok:
+            try:
+                profile = await structured.probe_capability(config)
+            except Exception as exc:
+                profile.errors.append(str(exc))
+        detail = {
+            "role": role,
+            "ok": conn.ok,
+            "latency_ms": conn.latency_ms,
+            "error": conn.error_message,
+            "error_type": conn.error_type,
+            "profile": profile.model_dump(mode="json"),
+        }
+        if role in {"compiler", "simulator", "judge"}:
+            detail["ok"] = conn.ok and (
+                profile.plain_json_supported
+                or profile.json_object_supported
+                or profile.recommended_mode in {"staged_plain_json", "staged_response_format"}
+            )
+        else:
+            detail["ok"] = conn.ok and profile.short_text_ok
+        return detail
 
-    all_ok = all(
-        (r is not None and r.ok)
-        for r in [compiler_r, target_r, simulator_r, judge_r]
-    )
+    results = await asyncio.gather(*[_probe(role, config) for role, config in role_configs], return_exceptions=True)
+    details = []
+    for (role, config), result in zip(role_configs, results):
+        if isinstance(result, Exception):
+            profile = model_runtime_profile(config)
+            profile.errors.append(str(result))
+            details.append(
+                {
+                    "role": role,
+                    "ok": False,
+                    "latency_ms": None,
+                    "error": str(result),
+                    "error_type": result.__class__.__name__,
+                    "profile": profile.model_dump(mode="json"),
+                }
+            )
+        else:
+            details.append(result)
+
+    all_ok = all(item.get("ok") for item in details)
     return {
         "ok": all_ok,
-        "details": [
-            _fmt(compiler_r, "compiler"),
-            _fmt(target_r, "target"),
-            _fmt(simulator_r, "simulator"),
-            _fmt(judge_r, "judge"),
-        ],
+        "details": details,
     }
 
 
 @app.post("/api/model/test")
 async def model_test(config: ModelConfig):
     return await OpenAICompatibleAdapter().test_connection(config)
+
+
+@app.get("/api/personas")
+async def list_personas():
+    try:
+        personas = repo.list_json("persona_profiles")
+    except Exception as exc:
+        return {"ok": False, "error": str(exc), "personas": []}
+    return {"ok": True, "personas": personas}
+
+
+@app.post("/api/personas")
+async def save_persona(request: PersonaProfileRequest):
+    persona_id = request.id or f"persona_{uuid.uuid4().hex[:10]}"
+    now = _utc_now()
+    try:
+        existing = repo.get_json("persona_profiles", persona_id)
+    except Exception:
+        existing = None
+    payload = {
+        "id": persona_id,
+        "name": request.name.strip(),
+        "persona": request.persona.model_dump(mode="json"),
+        "created_at": (existing or {}).get("created_at", now),
+        "updated_at": now,
+    }
+    persist_error = _safe_upsert_json("persona_profiles", persona_id, payload)
+    if persist_error:
+        return {"ok": False, "error": persist_error}
+    return {"ok": True, "profile": payload}
+
+
+@app.delete("/api/personas/{persona_id}")
+async def delete_persona(persona_id: str):
+    try:
+        deleted = repo.delete_json("persona_profiles", persona_id)
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+    if not deleted:
+        raise HTTPException(404, "Persona profile not found")
+    return {"ok": True, "id": persona_id}
 
 
 @app.post("/api/task/understand")
@@ -202,7 +294,8 @@ async def task_understand(request: LLMCompileRequest):
             model_config=request.llm_config,
         )
         compile_qa = CompileQAGate().validate(understanding)
-        repo.upsert_json(
+        diagnostics = [item.model_dump(mode="json") for item in compiler.last_diagnostics]
+        persist_error = _safe_upsert_json(
             "task_understandings",
             understanding.task_spec.get("task_id", "unknown"),
             understanding.model_dump(mode="json"),
@@ -211,10 +304,149 @@ async def task_understand(request: LLMCompileRequest):
             "ok": compile_qa.passed,
             "understanding": understanding.model_dump(mode="json"),
             "compile_qa": compile_qa.model_dump(mode="json"),
+            "compile_diagnostics": diagnostics,
+            "compile_stage_results": compiler.last_stage_results,
             "error": None if compile_qa.passed else "CompileQAGate blocked this task understanding.",
+            "persist_error": persist_error,
         }
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
+
+
+@app.post("/api/task/understand/start")
+async def task_understand_start(request: LLMCompileRequest):
+    """Start a background compile and stream status through SSE."""
+    compile_id = f"compile_{uuid.uuid4().hex[:12]}"
+    _compile_events[compile_id] = []
+    _compile_locks[compile_id] = asyncio.Lock()
+    started = time.perf_counter()
+
+    async def _push(event: dict[str, Any]) -> None:
+        async with _compile_locks[compile_id]:
+            _compile_events[compile_id].append(
+                {
+                    **event,
+                    "compile_id": compile_id,
+                    "elapsed_ms": int((time.perf_counter() - started) * 1000),
+                    "ts": _utc_now(),
+                }
+            )
+
+    stage_event_seq = 0
+
+    async def _on_compile_stage(event) -> None:
+        nonlocal stage_event_seq
+        stage_event_seq += 1
+        payload = event.model_dump(mode="json")
+        diag_id = f"{compile_id}.{stage_event_seq:03d}.{payload.get('stage')}.{payload.get('status')}"
+        _safe_upsert_json("compile_diagnostics", diag_id, payload)
+        if payload.get("status") in {"completed", "fallback", "failed"}:
+            stage = str(payload.get("stage") or "unknown")
+            _safe_upsert_json("compile_stage_results", f"{compile_id}.{stage}", payload)
+            if payload.get("artifact"):
+                _safe_upsert_json("compile_artifacts", f"{compile_id}.{stage}.{payload.get('status')}", payload)
+        await _push({"type": "stage", **payload})
+
+    async def _compile() -> None:
+        try:
+            await _push({"type": "stage", "stage": "queued", "message": "编译任务已创建"})
+            if not request.instruction.strip():
+                payload = {"ok": False, "error": "Instruction is empty."}
+                _compile_results[compile_id] = payload
+                await _push({"type": "error", "error": payload["error"]})
+                return
+
+            await _push({"type": "stage", "stage": "llm_request", "message": "正在请求编译模型"})
+            compiler = LLMTaskCompiler()
+            understanding = await compiler.compile(
+                raw_markdown=request.instruction,
+                model_config=request.llm_config,
+            )
+
+            await _push({"type": "stage", "stage": "compile_qa", "message": "正在校验编译结果"})
+            compile_qa = CompileQAGate().validate(understanding)
+            understanding_payload = understanding.model_dump(mode="json")
+            persist_error = _safe_upsert_json(
+                "task_understandings",
+                understanding.task_spec.get("task_id", compile_id),
+                understanding_payload,
+            )
+            payload = {
+                "ok": compile_qa.passed,
+                "compile_id": compile_id,
+                "understanding": understanding_payload,
+                "compile_qa": compile_qa.model_dump(mode="json"),
+                "error": None if compile_qa.passed else "CompileQAGate blocked this task understanding.",
+                "persist_error": persist_error,
+                "elapsed_ms": int((time.perf_counter() - started) * 1000),
+            }
+            _compile_results[compile_id] = payload
+            await _push(
+                {
+                    "type": "completed",
+                    "ok": compile_qa.passed,
+                    "task_id": understanding.task_spec.get("task_id", ""),
+                    "task_name": understanding.task_spec.get("task_name", ""),
+                    "error": payload["error"],
+                    "persist_error": persist_error,
+                }
+            )
+        except Exception as exc:
+            payload = {
+                "ok": False,
+                "compile_id": compile_id,
+                "error": str(exc),
+                "elapsed_ms": int((time.perf_counter() - started) * 1000),
+            }
+            _compile_results[compile_id] = payload
+            await _push({"type": "error", "error": str(exc)})
+
+    asyncio.create_task(_compile())
+    return {"ok": True, "compile_id": compile_id}
+
+
+@app.get("/api/task/understand/{compile_id}/events")
+async def task_understand_events(compile_id: str):
+    if compile_id not in _compile_events:
+        raise HTTPException(404, "Compile job not found")
+
+    async def _generator() -> AsyncGenerator[str, None]:
+        last_idx = 0
+        heartbeat = 0
+        while heartbeat < 900:
+            events = _compile_events.get(compile_id, [])
+            while last_idx < len(events):
+                ev = events[last_idx]
+                yield f"data: {json.dumps(ev, ensure_ascii=False)}\n\n"
+                last_idx += 1
+                if ev.get("type") in ("completed", "error"):
+                    return
+            await asyncio.sleep(1)
+            heartbeat += 1
+            yield f"data: {json.dumps({'type': 'heartbeat', 'compile_id': compile_id, 'elapsed_ms': heartbeat * 1000, 'message': '等待模型返回中'}, ensure_ascii=False)}\n\n"
+        yield f"data: {json.dumps({'type': 'timeout', 'compile_id': compile_id}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        _generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.get("/api/task/understand/{compile_id}/result")
+async def task_understand_result(compile_id: str):
+    result = _compile_results.get(compile_id)
+    if not result:
+        return {
+            "ok": False,
+            "pending": compile_id in _compile_events,
+            "compile_id": compile_id,
+            "error": "Compile job is still running or does not exist.",
+        }
+    return result
 
 
 @app.post("/api/scenarios/build")

@@ -8,6 +8,11 @@ from typing import Any
 
 TABLES = [
     "task_definitions",
+    "task_understandings",
+    "compile_stage_results",
+    "compile_artifacts",
+    "compile_diagnostics",
+    "persona_profiles",
     "task_specs",
     "scenario_definitions",
     "evaluation_runs",
@@ -44,6 +49,13 @@ class SQLiteRepository:
             row = db.execute(f"select payload_json from {table} where id = ?", (item_id,)).fetchone()
         return json.loads(row[0]) if row else None
 
+    def delete_json(self, table: str, item_id: str) -> bool:
+        if table not in TABLES:
+            raise ValueError(f"unknown table {table}")
+        with sqlite3.connect(self.path) as db:
+            cursor = db.execute(f"delete from {table} where id = ?", (item_id,))
+            return cursor.rowcount > 0
+
     def list_json(self, table: str) -> list[dict[str, Any]]:
         if table not in TABLES:
             raise ValueError(f"unknown table {table}")
@@ -63,4 +75,3 @@ class SQLiteRepository:
                     )
                     """
                 )
-

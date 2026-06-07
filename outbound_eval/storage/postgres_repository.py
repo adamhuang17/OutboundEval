@@ -11,6 +11,11 @@ from outbound_eval.storage.sqlite_repository import TABLES
 class PostgresRepository:
     def __init__(self, dsn: str):
         self.dsn = dsn
+        self._initialized = False
+
+    def _ensure_db(self) -> None:
+        if not self._initialized:
+            self.init_db()
 
     def init_db(self) -> None:
         with psycopg.connect(self.dsn) as conn:
@@ -44,10 +49,12 @@ class PostgresRepository:
                 cur.execute("create index if not exists idx_trace_episode on trace_events(episode_id)")
                 cur.execute("create index if not exists idx_trace_requirement on trace_events(requirement_id)")
             conn.commit()
+        self._initialized = True
 
     def upsert_json(self, table: str, item_id: str, payload: dict[str, Any]) -> None:
         if table not in TABLES:
             raise ValueError(f"unknown table {table}")
+        self._ensure_db()
         with psycopg.connect(self.dsn) as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -64,18 +71,30 @@ class PostgresRepository:
     def get_json(self, table: str, item_id: str) -> dict[str, Any] | None:
         if table not in TABLES:
             raise ValueError(f"unknown table {table}")
+        self._ensure_db()
         with psycopg.connect(self.dsn) as conn:
             with conn.cursor() as cur:
                 cur.execute(f"select payload_json from {table} where id = %s", (item_id,))
                 row = cur.fetchone()
         return row[0] if row else None
 
+    def delete_json(self, table: str, item_id: str) -> bool:
+        if table not in TABLES:
+            raise ValueError(f"unknown table {table}")
+        self._ensure_db()
+        with psycopg.connect(self.dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"delete from {table} where id = %s", (item_id,))
+                deleted = cur.rowcount > 0
+            conn.commit()
+        return deleted
+
     def list_json(self, table: str, limit: int = 50) -> list[dict[str, Any]]:
         if table not in TABLES:
             raise ValueError(f"unknown table {table}")
+        self._ensure_db()
         with psycopg.connect(self.dsn) as conn:
             with conn.cursor() as cur:
                 cur.execute(f"select payload_json from {table} order by updated_at desc limit %s", (limit,))
                 rows = cur.fetchall()
         return [row[0] for row in rows]
-

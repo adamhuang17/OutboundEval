@@ -12,6 +12,11 @@ const state = {
   reportData: null,
   chatEpisodes: {},   // episodeId -> {turns, judgeResult, scenario}
   activeChatEpisode: null,
+  personaProfiles: [],
+  activePersonaId: null,
+  compileEventSource: null,
+  compileTimer: null,
+  compileStartedAt: null,
 };
 
 // ===== 工具函数 =====
@@ -27,6 +32,11 @@ const post = async (url, body) => {
 };
 const get = async (url) => {
   const res = await fetch(url);
+  if (!res.ok) throw new Error(await res.text());
+  return await res.json();
+};
+const del = async (url) => {
+  const res = await fetch(url, { method: "DELETE" });
   if (!res.ok) throw new Error(await res.text());
   return await res.json();
 };
@@ -77,6 +87,115 @@ function getPersona() {
     inconvenience_context: $("pInconvenience")?.value || "",
     extra_notes: $("pNotes")?.value || "",
   };
+}
+
+const personaFieldMap = {
+  identity: "pIdentity",
+  relationship_to_task: "pRelationship",
+  motivation: "pMotivation",
+  attitude: "pAttitude",
+  communication_style: "pStyle",
+  initial_focus: "pFocus",
+  decision_rule: "pDecision",
+  inconvenience_context: "pInconvenience",
+  extra_notes: "pNotes",
+};
+
+function setPersona(persona = {}) {
+  Object.entries(personaFieldMap).forEach(([key, id]) => {
+    const el = $(id);
+    if (el) el.value = persona[key] || "";
+  });
+}
+
+function setPersonaStatus(message, isError = false) {
+  const el = $("personaStatus");
+  if (!el) return;
+  el.textContent = message || "";
+  el.style.color = isError ? "var(--red)" : "var(--muted)";
+}
+
+async function loadPersonaProfiles(selectId = "") {
+  try {
+    const result = await get("/api/personas");
+    if (!result.ok) throw new Error(result.error || "画像读取失败");
+    state.personaProfiles = result.personas || [];
+    renderPersonaOptions(selectId || state.activePersonaId || "");
+    setPersonaStatus(state.personaProfiles.length ? `已加载 ${state.personaProfiles.length} 个画像` : "还没有保存的画像");
+  } catch (err) {
+    setPersonaStatus(`画像读取失败: ${err.message}`, true);
+  }
+}
+
+function renderPersonaOptions(selectedId = "") {
+  const select = $("personaSelect");
+  if (!select) return;
+  select.innerHTML = `<option value="">未选择</option>` + state.personaProfiles.map((profile) => {
+    const selected = profile.id === selectedId ? " selected" : "";
+    return `<option value="${escHtml(profile.id)}"${selected}>${escHtml(profile.name || profile.id)}</option>`;
+  }).join("");
+  state.activePersonaId = selectedId || "";
+}
+
+function loadSelectedPersona() {
+  const id = $("personaSelect")?.value || "";
+  state.activePersonaId = id;
+  const profile = state.personaProfiles.find((item) => item.id === id);
+  if (!profile) {
+    $("personaName").value = "";
+    return;
+  }
+  $("personaName").value = profile.name || "";
+  setPersona(profile.persona || {});
+  setPersonaStatus(`已载入：${profile.name || profile.id}`);
+}
+
+async function savePersonaProfile(overwrite) {
+  const selectedId = $("personaSelect")?.value || "";
+  if (overwrite && !selectedId) {
+    alert("请先选择一个已保存画像，再覆盖保存。");
+    return;
+  }
+  const name = ($("personaName")?.value || "").trim();
+  if (!name) {
+    alert("请先填写画像名称。");
+    return;
+  }
+  setPersonaStatus("正在保存画像...");
+  try {
+    const result = await post("/api/personas", {
+      id: overwrite ? selectedId : null,
+      name,
+      persona: getPersona(),
+    });
+    if (!result.ok) throw new Error(result.error || "保存失败");
+    state.activePersonaId = result.profile.id;
+    await loadPersonaProfiles(result.profile.id);
+    setPersonaStatus(`已保存：${result.profile.name}`);
+  } catch (err) {
+    setPersonaStatus(`保存失败: ${err.message}`, true);
+  }
+}
+
+async function deletePersonaProfile() {
+  const selectedId = $("personaSelect")?.value || "";
+  if (!selectedId) {
+    alert("请先选择一个画像。");
+    return;
+  }
+  const profile = state.personaProfiles.find((item) => item.id === selectedId);
+  if (!confirm(`删除画像「${profile?.name || selectedId}」？`)) return;
+  setPersonaStatus("正在删除画像...");
+  try {
+    const result = await del(`/api/personas/${encodeURIComponent(selectedId)}`);
+    if (!result.ok) throw new Error(result.error || "删除失败");
+    state.activePersonaId = "";
+    $("personaName").value = "";
+    await loadPersonaProfiles("");
+    setPersonaStatus("画像已删除");
+  } catch (err) {
+    setPersonaStatus(`删除失败: ${err.message}`, true);
+  }
 }
 
 // ===== 测试单个模型 =====
@@ -176,6 +295,96 @@ function switchCompileTab(tabName) {
   $(`ctab-${tabName}`)?.classList.add("active");
 }
 
+function formatElapsed(ms) {
+  const total = Math.max(0, Math.floor((ms || 0) / 1000));
+  const min = Math.floor(total / 60);
+  const sec = String(total % 60).padStart(2, "0");
+  return `${min}:${sec}`;
+}
+
+function setCompileStatus(message, elapsedMs = null, isError = false) {
+  const live = $("compileLiveStatus");
+  if (live) {
+    live.textContent = elapsedMs === null ? message : `${message} · 已用 ${formatElapsed(elapsedMs)}`;
+    live.style.color = isError ? "var(--red)" : "var(--muted)";
+  }
+  const timer = $("compileTimer");
+  if (timer && elapsedMs !== null) timer.textContent = `已用 ${formatElapsed(elapsedMs)}`;
+}
+
+function startCompileTimer() {
+  clearInterval(state.compileTimer);
+  state.compileStartedAt = Date.now();
+  setCompileStatus("正在启动编译任务", 0);
+  state.compileTimer = setInterval(() => {
+    setCompileStatus("等待编译模型返回中", Date.now() - state.compileStartedAt);
+  }, 1000);
+}
+
+function stopCompileTimer(message, isError = false, elapsedMs = null) {
+  clearInterval(state.compileTimer);
+  state.compileTimer = null;
+  const finalElapsed = elapsedMs ?? (state.compileStartedAt ? Date.now() - state.compileStartedAt : null);
+  setCompileStatus(message, finalElapsed, isError);
+}
+
+function resetCompileButton() {
+  const btn = $("btnCompileLLM");
+  btn.textContent = "🤖 LLM 编译任务";
+  btn.disabled = false;
+}
+
+function renderCompileResult(result) {
+  if (!result.understanding) {
+    $("specResult").textContent = `编译失败: ${result.error || "未返回 TaskUnderstanding"}`;
+    return false;
+  }
+  state.understanding = result.understanding;
+  const u = result.understanding;
+  const ts = u.task_spec || {};
+
+  $("specResult").textContent = fmt({
+    task_id: ts.task_id,
+    task_name: ts.task_name,
+    role: ts.role,
+    objective: ts.objective,
+    opening_line: ts.opening_line,
+    requirements_count: (ts.requirements || []).length,
+    flow_nodes_count: (ts.flow_nodes || []).length,
+    constraints_count: (ts.constraints || []).length,
+    forbidden_behaviors_count: (ts.forbidden_behaviors || []).length,
+    termination_rules_count: (ts.termination_rules || []).length,
+    requirements: ts.requirements,
+  });
+
+  $("judgeResult").textContent = fmt(u.judge_plan || {});
+  $("riskResult").textContent = fmt(u.risk_plan || {});
+  renderKnowledgeFacts(u.knowledge_facts || []);
+  renderFindings(u.compile_findings || []);
+  switchCompileTab("spec");
+  return Boolean(result.ok);
+}
+
+async function finishCompile(compileId, ev) {
+  try {
+    const result = await get(`/api/task/understand/${compileId}/result`);
+    const qaOk = renderCompileResult(result);
+    const elapsed = result.elapsed_ms ?? ev.elapsed_ms;
+    if (result.persist_error) {
+      setCompileStatus(`编译完成，但保存结果失败: ${result.persist_error}`, elapsed, true);
+    } else if (qaOk) {
+      setCompileStatus(`编译完成：${result.understanding?.task_spec?.task_name || compileId}`, elapsed);
+    } else {
+      setCompileStatus(`编译完成但 QA 未通过: ${result.error || "请查看发现页"}`, elapsed, true);
+    }
+  } catch (err) {
+    $("specResult").textContent = `获取编译结果失败: ${err.message}`;
+    stopCompileTimer("获取编译结果失败", true, ev.elapsed_ms);
+  } finally {
+    resetCompileButton();
+  }
+}
+
 // ===== LLM 编译任务 =====
 async function compileLLM() {
   if (!checkModelsReady()) return;
@@ -187,55 +396,68 @@ async function compileLLM() {
   const btn = $("btnCompileLLM");
   btn.textContent = "⏳ 编译中...";
   btn.disabled = true;
-  $("specResult").textContent = "正在编译，请稍候...";
+  state.understanding = null;
+  $("specResult").textContent = "任务已提交，正在等待编译模型返回...";
+  $("judgeResult").textContent = "（等待编译完成）";
+  $("riskResult").textContent = "（等待编译完成）";
+  $("knowledgeCards").innerHTML = "";
+  $("findingsCards").innerHTML = "";
+  if (state.compileEventSource) state.compileEventSource.close();
+  startCompileTimer();
 
   try {
-    const result = await post("/api/task/understand", {
+    const started = await post("/api/task/understand/start", {
       instruction,
       llm_config: getModelConfig("compiler"),
     });
-    if (!result.ok) {
-      $("specResult").textContent = `编译失败: ${result.error}`;
-      return;
-    }
-    state.understanding = result.understanding;
-    const u = result.understanding;
-    const ts = u.task_spec || {};
+    if (!started.ok) throw new Error(started.error || "编译任务启动失败");
+    const compileId = started.compile_id;
+    $("specResult").textContent = `编译任务 ${compileId} 已启动。\n等待模型返回时可以继续查看页面，状态会持续刷新。`;
 
-    // TaskSpec tab
-    $("specResult").textContent = fmt({
-      task_id: ts.task_id,
-      task_name: ts.task_name,
-      role: ts.role,
-      objective: ts.objective,
-      opening_line: ts.opening_line,
-      requirements_count: (ts.requirements || []).length,
-      flow_nodes_count: (ts.flow_nodes || []).length,
-      constraints_count: (ts.constraints || []).length,
-      forbidden_behaviors_count: (ts.forbidden_behaviors || []).length,
-      termination_rules_count: (ts.termination_rules || []).length,
-      requirements: ts.requirements,
-    });
-
-    // JudgePlan tab
-    const jp = u.judge_plan || {};
-    $("judgeResult").textContent = fmt(jp);
-
-    // RiskPlan tab
-    $("riskResult").textContent = fmt(u.risk_plan || {});
-
-    // Knowledge tab
-    renderKnowledgeFacts(u.knowledge_facts || []);
-
-    // Findings tab
-    renderFindings(u.compile_findings || []);
-
-    switchCompileTab("spec");
+    const es = new EventSource(`/api/task/understand/${compileId}/events`);
+    state.compileEventSource = es;
+    es.onmessage = async (e) => {
+      const ev = JSON.parse(e.data);
+      if (ev.type === "heartbeat") {
+        setCompileStatus(ev.message || "等待模型返回中", Date.now() - state.compileStartedAt);
+        return;
+      }
+      if (ev.type === "stage") {
+        setCompileStatus(`[${ev.stage}] ${ev.message || ""}`, ev.elapsed_ms);
+        return;
+      }
+      if (ev.type === "completed") {
+        es.close();
+        state.compileEventSource = null;
+        stopCompileTimer("正在读取编译结果", false, ev.elapsed_ms);
+        await finishCompile(compileId, ev);
+        return;
+      }
+      if (ev.type === "error") {
+        es.close();
+        state.compileEventSource = null;
+        stopCompileTimer(`编译失败: ${ev.error}`, true, ev.elapsed_ms);
+        $("specResult").textContent = `编译失败: ${ev.error}`;
+        resetCompileButton();
+        return;
+      }
+      if (ev.type === "timeout") {
+        es.close();
+        state.compileEventSource = null;
+        stopCompileTimer("编译监听超时", true);
+        resetCompileButton();
+      }
+    };
+    es.onerror = () => {
+      es.close();
+      state.compileEventSource = null;
+      stopCompileTimer("编译事件流断开，请重试或查看后端日志", true);
+      resetCompileButton();
+    };
   } catch (err) {
+    stopCompileTimer(`错误: ${err.message}`, true);
     $("specResult").textContent = `错误: ${err.message}`;
-  } finally {
-    btn.textContent = "🤖 LLM 编译任务";
-    btn.disabled = false;
+    resetCompileButton();
   }
 }
 
@@ -806,3 +1028,5 @@ function escHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
+
+loadPersonaProfiles();

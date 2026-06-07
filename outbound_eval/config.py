@@ -17,4 +17,3 @@ class AppSettings:
 
 def settings() -> AppSettings:
     return AppSettings()
-

@@ -123,6 +123,20 @@
       <div class="persona-section">
         <h2>评测员画像 <span class="badge-optional">可选但推荐填写</span></h2>
         <p class="sub">描述模拟用户的身份和特征，越详细场景越贴近真实测试目的</p>
+        <div class="persona-toolbar">
+          <label>画像名称
+            <input id="personaName" placeholder="例如：谨慎的新骑手">
+          </label>
+          <label>已保存画像
+            <select id="personaSelect" onchange="loadSelectedPersona()">
+              <option value="">未选择</option>
+            </select>
+          </label>
+          <button class="btn-secondary" onclick="savePersonaProfile(false)">保存为新画像</button>
+          <button class="btn-secondary" onclick="savePersonaProfile(true)">覆盖保存</button>
+          <button class="btn-secondary danger" onclick="deletePersonaProfile()">删除</button>
+          <span id="personaStatus" class="inline-status"></span>
+        </div>
         <div class="persona-grid">
           <label>身份描述
             <input id="pIdentity" placeholder="如：新用户 / 老客户 / 门店负责人">
@@ -161,8 +175,10 @@
         <h1>任务编译</h1>
         <div class="btn-row">
           <button class="btn-primary" id="btnCompileLLM" onclick="compileLLM()">🤖 LLM 编译任务</button>
+          <span id="compileTimer" class="inline-status"></span>
         </div>
       </div>
+      <div id="compileLiveStatus" class="status-bar">等待编译任务</div>
       <div class="split-pane">
         <div class="pane-left">
           <label class="pane-label">Markdown 任务说明</label>
