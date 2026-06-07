@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from typing import Any, Type, TypeVar
 
@@ -21,11 +22,111 @@ from outbound_eval.domain.schemas_model import ModelConfig
 
 T = TypeVar("T", bound=BaseModel)
 
+_JSON_MODE_HINT = (
+    'Return only one valid JSON object. Use standard ASCII double quotes (") '
+    "for every JSON key and string delimiter. Do not use Chinese/full-width "
+    "quotation marks, Markdown code fences, comments, or trailing commas."
+)
+
+_SMART_QUOTES = {"\u201c", "\u201d", "\u201e", "\u201f", "\uff02"}
+_STRING_START_PREV_CHARS = {"", "{", "[", ":", ","}
+_STRING_END_NEXT_CHARS = {"", ":", ",", "}", "]"}
+
 _REPAIR_HINTS = [
     # 截断的 JSON 末尾补 }] 组合
     (r",\s*$", ""),
     (r",$", ""),
 ]
+
+
+def _prev_nonspace(text: str, index: int) -> str:
+    for i in range(index, -1, -1):
+        if not text[i].isspace():
+            return text[i]
+    return ""
+
+
+def _next_nonspace(text: str, index: int) -> str:
+    for i in range(index, len(text)):
+        if not text[i].isspace():
+            return text[i]
+    return ""
+
+
+def _normalize_smart_json_quotes(text: str) -> str:
+    out: list[str] = []
+    in_string = False
+    string_delim = ""
+    escape = False
+
+    for i, ch in enumerate(text):
+        if in_string:
+            if escape:
+                out.append(ch)
+                escape = False
+                continue
+            if ch == "\\":
+                out.append(ch)
+                escape = True
+                continue
+            if string_delim == '"' and ch == '"':
+                out.append(ch)
+                in_string = False
+                string_delim = ""
+                continue
+            if string_delim == "smart" and ch in _SMART_QUOTES:
+                if _next_nonspace(text, i + 1) in _STRING_END_NEXT_CHARS:
+                    out.append('"')
+                    in_string = False
+                    string_delim = ""
+                else:
+                    out.append(ch)
+                continue
+            if string_delim == "smart" and ch == '"':
+                out.append('\\"')
+                continue
+            out.append(ch)
+            continue
+
+        if ch == '"':
+            out.append(ch)
+            in_string = True
+            string_delim = '"'
+            continue
+        if ch in _SMART_QUOTES and _prev_nonspace(text, i - 1) in _STRING_START_PREV_CHARS:
+            out.append('"')
+            in_string = True
+            string_delim = "smart"
+            continue
+        out.append(ch)
+
+    return "".join(out)
+
+
+def _messages_with_json_hint(messages: list[dict[str, str]]) -> list[dict[str, str]]:
+    if not messages:
+        return [{"role": "system", "content": _JSON_MODE_HINT}]
+
+    hinted = [dict(message) for message in messages]
+    for message in hinted:
+        if message.get("role") == "system":
+            content = message.get("content", "")
+            if _JSON_MODE_HINT not in content:
+                message["content"] = f"{content}\n\n{_JSON_MODE_HINT}".strip()
+            return hinted
+    return [{"role": "system", "content": _JSON_MODE_HINT}, *hinted]
+
+
+def _response_format_is_unsupported(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return (
+        "response_format" in message
+        and "json_object" in message
+        and any(
+            marker in message
+            for marker in ("not supported", "not valid", "invalidparameter", "invalid parameter", "unsupported")
+        )
+    )
 
 
 def _try_repair_json(text: str) -> str:
@@ -53,6 +154,8 @@ def _try_repair_json(text: str) -> str:
         t += "}" * open_braces
     if open_brackets > 0:
         t += "]" * open_brackets
+    t = _normalize_smart_json_quotes(t)
+    t = re.sub(r",\s*([}\]])", r"\1", t)
     return t
 
 
@@ -85,18 +188,32 @@ class StructuredLLMClient:
         warnings: list[str] = []
         repaired = False
         raw_text = ""
+        use_response_format = True
+        request_messages = _messages_with_json_hint(messages)
 
         for attempt in range(max_retries):
             try:
                 started = time.perf_counter()
-                resp = await client.chat.completions.create(
-                    model=model_config.model_name,
-                    messages=messages,  # type: ignore[arg-type]
-                    temperature=temp,
-                    max_tokens=model_config.max_tokens,
-                    timeout=model_config.timeout_seconds,
-                    response_format={"type": "json_object"},
-                )
+                request: dict[str, Any] = {
+                    "model": model_config.model_name,
+                    "messages": request_messages,
+                    "temperature": temp,
+                    "max_tokens": model_config.max_tokens,
+                    "timeout": model_config.timeout_seconds,
+                }
+                if use_response_format:
+                    request["response_format"] = {"type": "json_object"}
+                try:
+                    resp = await client.chat.completions.create(**request)
+                except Exception as exc:
+                    if not use_response_format or not _response_format_is_unsupported(exc):
+                        raise
+                    use_response_format = False
+                    warnings.append(
+                        f"attempt {attempt}: response_format json_object unsupported by model; retried without it"
+                    )
+                    request.pop("response_format", None)
+                    resp = await client.chat.completions.create(**request)
                 raw_text = resp.choices[0].message.content or ""
                 try:
                     data = json.loads(raw_text)
