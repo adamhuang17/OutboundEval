@@ -1,0 +1,612 @@
+{
+  "task_id": "task_outbound_3e6cb8b975",
+  "scenarios": [
+    {
+      "scenario_id": "scn.happy_path.task_outbound_3e6cb8b975_1",
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_name": "正常配合",
+      "scenario_type": "happy_path",
+      "persona": {
+        "persona_id": "persona_happy_path_001",
+        "role": "called_user",
+        "age_range": "30-40",
+        "gender": "unknown",
+        "attitude": "cooperative",
+        "knowledge_level": "unaware",
+        "speaking_style": "colloquial",
+        "common_working_hours": "workday_daytime",
+        "working_location": "office"
+      },
+      "user_prior_conditions": [
+        "用户愿意沟通",
+        "用户能按流程确认"
+      ],
+      "hidden_goal": "Trigger and evaluate: req.constraint.constraint_c892bd4482",
+      "trigger_plan": {
+        "intent": "正常配合",
+        "steps": [
+          "Use action answer_yes"
+        ],
+        "required_user_actions": [
+          "answer_yes"
+        ],
+        "stop_conditions": [
+          "covered requirements triggered",
+          "max_turns reached"
+        ]
+      },
+      "covered_requirement_ids": [
+        "req.constraint.constraint_c892bd4482"
+      ],
+      "expected_behavior_ids": [
+        "expected.req_constraint_constraint_c892bd4482"
+      ],
+      "max_turns": 10,
+      "difficulty": "medium",
+      "metadata": {}
+    },
+    {
+      "scenario_id": "scn.main_flow.task_outbound_3e6cb8b975_2",
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_name": "主流程确认",
+      "scenario_type": "main_flow",
+      "persona": {
+        "persona_id": "persona_main_flow_002",
+        "role": "called_user",
+        "age_range": "30-40",
+        "gender": "unknown",
+        "attitude": "questioning",
+        "knowledge_level": "unaware",
+        "speaking_style": "colloquial",
+        "common_working_hours": "workday_daytime",
+        "working_location": "office"
+      },
+      "user_prior_conditions": [
+        "用户会追问一句细节"
+      ],
+      "hidden_goal": "Trigger and evaluate: req.exception.exception_697bf5a797",
+      "trigger_plan": {
+        "intent": "主流程确认",
+        "steps": [
+          "Use action answer_yes",
+          "Use action ask_faq"
+        ],
+        "required_user_actions": [
+          "answer_yes",
+          "ask_faq"
+        ],
+        "stop_conditions": [
+          "covered requirements triggered",
+          "max_turns reached"
+        ]
+      },
+      "covered_requirement_ids": [
+        "req.exception.exception_697bf5a797"
+      ],
+      "expected_behavior_ids": [
+        "expected.req_exception_exception_697bf5a797"
+      ],
+      "max_turns": 10,
+      "difficulty": "medium",
+      "metadata": {}
+    },
+    {
+      "scenario_id": "scn.main_flow.task_outbound_3e6cb8b975_3",
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_name": "主流程简短确认",
+      "scenario_type": "main_flow",
+      "persona": {
+        "persona_id": "persona_main_flow_003",
+        "role": "called_user",
+        "age_range": "30-40",
+        "gender": "unknown",
+        "attitude": "questioning",
+        "knowledge_level": "unaware",
+        "speaking_style": "colloquial",
+        "common_working_hours": "workday_daytime",
+        "working_location": "office"
+      },
+      "user_prior_conditions": [
+        "用户时间有限但配合"
+      ],
+      "hidden_goal": "Trigger and evaluate: req.task.objective",
+      "trigger_plan": {
+        "intent": "主流程简短确认",
+        "steps": [
+          "Use action say_busy",
+          "Use action answer_yes"
+        ],
+        "required_user_actions": [
+          "say_busy",
+          "answer_yes"
+        ],
+        "stop_conditions": [
+          "covered requirements triggered",
+          "max_turns reached"
+        ]
+      },
+      "covered_requirement_ids": [
+        "req.task.objective"
+      ],
+      "expected_behavior_ids": [
+        "expected.req_task_objective"
+      ],
+      "max_turns": 10,
+      "difficulty": "medium",
+      "metadata": {}
+    },
+    {
+      "scenario_id": "scn.main_flow.task_outbound_3e6cb8b975_4",
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_name": "主流程复核",
+      "scenario_type": "main_flow",
+      "persona": {
+        "persona_id": "persona_main_flow_004",
+        "role": "called_user",
+        "age_range": "30-40",
+        "gender": "unknown",
+        "attitude": "questioning",
+        "knowledge_level": "unaware",
+        "speaking_style": "colloquial",
+        "common_working_hours": "workday_daytime",
+        "working_location": "office"
+      },
+      "user_prior_conditions": [
+        "用户要求复述重点"
+      ],
+      "hidden_goal": "Trigger and evaluate: req.constraint.constraint_7ccef9e4f5",
+      "trigger_plan": {
+        "intent": "主流程复核",
+        "steps": [
+          "Use action ask_faq"
+        ],
+        "required_user_actions": [
+          "ask_faq"
+        ],
+        "stop_conditions": [
+          "covered requirements triggered",
+          "max_turns reached"
+        ]
+      },
+      "covered_requirement_ids": [
+        "req.constraint.constraint_7ccef9e4f5"
+      ],
+      "expected_behavior_ids": [
+        "expected.req_constraint_constraint_7ccef9e4f5"
+      ],
+      "max_turns": 10,
+      "difficulty": "medium",
+      "metadata": {}
+    },
+    {
+      "scenario_id": "scn.exception.task_outbound_3e6cb8b975_5",
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_name": "用户拒绝",
+      "scenario_type": "exception",
+      "persona": {
+        "persona_id": "persona_exception_005",
+        "role": "called_user",
+        "age_range": "30-40",
+        "gender": "unknown",
+        "attitude": "busy",
+        "knowledge_level": "unaware",
+        "speaking_style": "colloquial",
+        "common_working_hours": "workday_daytime",
+        "working_location": "office"
+      },
+      "user_prior_conditions": [
+        "用户不想继续",
+        "用户明确拒绝"
+      ],
+      "hidden_goal": "Trigger and evaluate: req.exception.exception_bb1f6c6a7f",
+      "trigger_plan": {
+        "intent": "用户拒绝",
+        "steps": [
+          "Use action refuse"
+        ],
+        "required_user_actions": [
+          "refuse"
+        ],
+        "stop_conditions": [
+          "covered requirements triggered",
+          "max_turns reached"
+        ]
+      },
+      "covered_requirement_ids": [
+        "req.exception.exception_bb1f6c6a7f"
+      ],
+      "expected_behavior_ids": [
+        "expected.req_exception_exception_bb1f6c6a7f"
+      ],
+      "max_turns": 10,
+      "difficulty": "medium",
+      "metadata": {}
+    },
+    {
+      "scenario_id": "scn.exception.task_outbound_3e6cb8b975_6",
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_name": "用户忙碌或开车",
+      "scenario_type": "exception",
+      "persona": {
+        "persona_id": "persona_exception_006",
+        "role": "called_user",
+        "age_range": "30-40",
+        "gender": "unknown",
+        "attitude": "busy",
+        "knowledge_level": "unaware",
+        "speaking_style": "colloquial",
+        "common_working_hours": "workday_daytime",
+        "working_location": "on_the_road"
+      },
+      "user_prior_conditions": [
+        "用户正在开车",
+        "用户无法继续通话"
+      ],
+      "hidden_goal": "Trigger and evaluate: req.flow.flow_67bd694b30",
+      "trigger_plan": {
+        "intent": "用户忙碌或开车",
+        "steps": [
+          "Use action say_driving",
+          "Use action end_call"
+        ],
+        "required_user_actions": [
+          "say_driving",
+          "end_call"
+        ],
+        "stop_conditions": [
+          "covered requirements triggered",
+          "max_turns reached"
+        ]
+      },
+      "covered_requirement_ids": [
+        "req.flow.flow_67bd694b30"
+      ],
+      "expected_behavior_ids": [
+        "expected.req_flow_flow_67bd694b30"
+      ],
+      "max_turns": 10,
+      "difficulty": "medium",
+      "metadata": {}
+    },
+    {
+      "scenario_id": "scn.exception.task_outbound_3e6cb8b975_7",
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_name": "非负责人",
+      "scenario_type": "exception",
+      "persona": {
+        "persona_id": "persona_exception_007",
+        "role": "called_user",
+        "age_range": "30-40",
+        "gender": "unknown",
+        "attitude": "busy",
+        "knowledge_level": "unaware",
+        "speaking_style": "colloquial",
+        "common_working_hours": "workday_daytime",
+        "working_location": "office"
+      },
+      "user_prior_conditions": [
+        "用户不是负责人"
+      ],
+      "hidden_goal": "Trigger and evaluate: req.flow.flow_a83995c81b",
+      "trigger_plan": {
+        "intent": "非负责人",
+        "steps": [
+          "Use action claim_not_responsible"
+        ],
+        "required_user_actions": [
+          "claim_not_responsible"
+        ],
+        "stop_conditions": [
+          "covered requirements triggered",
+          "max_turns reached"
+        ]
+      },
+      "covered_requirement_ids": [
+        "req.flow.flow_a83995c81b"
+      ],
+      "expected_behavior_ids": [
+        "expected.req_flow_flow_a83995c81b"
+      ],
+      "max_turns": 10,
+      "difficulty": "medium",
+      "metadata": {}
+    },
+    {
+      "scenario_id": "scn.faq_probe.task_outbound_3e6cb8b975_8_faq",
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_name": "关键 FAQ 追问",
+      "scenario_type": "faq_probe",
+      "persona": {
+        "persona_id": "persona_faq_probe_008",
+        "role": "called_user",
+        "age_range": "30-40",
+        "gender": "unknown",
+        "attitude": "questioning",
+        "knowledge_level": "partially_aware",
+        "speaking_style": "colloquial",
+        "common_working_hours": "workday_daytime",
+        "working_location": "office"
+      },
+      "user_prior_conditions": [
+        "用户会追问费用、时间或订单数"
+      ],
+      "hidden_goal": "Trigger and evaluate: req.flow.flow_c56ed82ee8",
+      "trigger_plan": {
+        "intent": "关键 FAQ 追问",
+        "steps": [
+          "Use action ask_faq"
+        ],
+        "required_user_actions": [
+          "ask_faq"
+        ],
+        "stop_conditions": [
+          "covered requirements triggered",
+          "max_turns reached"
+        ]
+      },
+      "covered_requirement_ids": [
+        "req.flow.flow_c56ed82ee8"
+      ],
+      "expected_behavior_ids": [
+        "expected.req_flow_flow_c56ed82ee8"
+      ],
+      "max_turns": 10,
+      "difficulty": "medium",
+      "metadata": {}
+    },
+    {
+      "scenario_id": "scn.faq_probe.task_outbound_3e6cb8b975_9",
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_name": "知识细节追问",
+      "scenario_type": "faq_probe",
+      "persona": {
+        "persona_id": "persona_faq_probe_009",
+        "role": "called_user",
+        "age_range": "30-40",
+        "gender": "unknown",
+        "attitude": "questioning",
+        "knowledge_level": "partially_aware",
+        "speaking_style": "colloquial",
+        "common_working_hours": "workday_daytime",
+        "working_location": "office"
+      },
+      "user_prior_conditions": [
+        "用户不了解业务术语"
+      ],
+      "hidden_goal": "Trigger and evaluate: req.flow.opening_greeting",
+      "trigger_plan": {
+        "intent": "知识细节追问",
+        "steps": [
+          "Use action ask_faq"
+        ],
+        "required_user_actions": [
+          "ask_faq"
+        ],
+        "stop_conditions": [
+          "covered requirements triggered",
+          "max_turns reached"
+        ]
+      },
+      "covered_requirement_ids": [
+        "req.flow.opening_greeting"
+      ],
+      "expected_behavior_ids": [
+        "expected.req_flow_opening_greeting"
+      ],
+      "max_turns": 10,
+      "difficulty": "medium",
+      "metadata": {}
+    },
+    {
+      "scenario_id": "scn.constraint_risk.task_outbound_3e6cb8b975_10",
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_name": "边界问题",
+      "scenario_type": "constraint_risk",
+      "persona": {
+        "persona_id": "persona_constraint_risk_010",
+        "role": "called_user",
+        "age_range": "30-40",
+        "gender": "unknown",
+        "attitude": "skeptical",
+        "knowledge_level": "unaware",
+        "speaking_style": "colloquial",
+        "common_working_hours": "workday_daytime",
+        "working_location": "office"
+      },
+      "user_prior_conditions": [
+        "用户要求优惠或额外承诺"
+      ],
+      "hidden_goal": "Trigger and evaluate: req.knowledge.knowledge_868f5d048c",
+      "trigger_plan": {
+        "intent": "边界问题",
+        "steps": [
+          "Use action ask_out_of_scope"
+        ],
+        "required_user_actions": [
+          "ask_out_of_scope"
+        ],
+        "stop_conditions": [
+          "covered requirements triggered",
+          "max_turns reached"
+        ]
+      },
+      "covered_requirement_ids": [
+        "req.knowledge.knowledge_868f5d048c"
+      ],
+      "expected_behavior_ids": [
+        "expected.req_knowledge_knowledge_868f5d048c"
+      ],
+      "max_turns": 10,
+      "difficulty": "high",
+      "metadata": {}
+    },
+    {
+      "scenario_id": "scn.constraint_risk.task_outbound_3e6cb8b975_11",
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_name": "看不到配置或无法执行",
+      "scenario_type": "constraint_risk",
+      "persona": {
+        "persona_id": "persona_constraint_risk_011",
+        "role": "called_user",
+        "age_range": "30-40",
+        "gender": "unknown",
+        "attitude": "skeptical",
+        "knowledge_level": "unaware",
+        "speaking_style": "colloquial",
+        "common_working_hours": "workday_daytime",
+        "working_location": "office"
+      },
+      "user_prior_conditions": [
+        "用户看不到相关入口或无法配送"
+      ],
+      "hidden_goal": "Trigger and evaluate: req.knowledge.knowledge_8ccf56f397",
+      "trigger_plan": {
+        "intent": "看不到配置或无法执行",
+        "steps": [
+          "Use action claim_cannot_see_feature"
+        ],
+        "required_user_actions": [
+          "claim_cannot_see_feature"
+        ],
+        "stop_conditions": [
+          "covered requirements triggered",
+          "max_turns reached"
+        ]
+      },
+      "covered_requirement_ids": [
+        "req.knowledge.knowledge_8ccf56f397"
+      ],
+      "expected_behavior_ids": [
+        "expected.req_knowledge_knowledge_8ccf56f397"
+      ],
+      "max_turns": 10,
+      "difficulty": "high",
+      "metadata": {}
+    },
+    {
+      "scenario_id": "scn.metamorphic.task_outbound_3e6cb8b975_12",
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_name": "换说法变体",
+      "scenario_type": "metamorphic",
+      "persona": {
+        "persona_id": "persona_metamorphic_012",
+        "role": "called_user",
+        "age_range": "30-40",
+        "gender": "unknown",
+        "attitude": "questioning",
+        "knowledge_level": "unaware",
+        "speaking_style": "interrupting",
+        "common_working_hours": "workday_daytime",
+        "working_location": "office"
+      },
+      "user_prior_conditions": [
+        "用户表达顺序变化",
+        "用户情绪略有波动"
+      ],
+      "hidden_goal": "Trigger and evaluate: req.constraint.constraint_c892bd4482",
+      "trigger_plan": {
+        "intent": "换说法变体",
+        "steps": [
+          "Use action interrupt",
+          "Use action ask_faq"
+        ],
+        "required_user_actions": [
+          "interrupt",
+          "ask_faq"
+        ],
+        "stop_conditions": [
+          "covered requirements triggered",
+          "max_turns reached"
+        ]
+      },
+      "covered_requirement_ids": [
+        "req.constraint.constraint_c892bd4482"
+      ],
+      "expected_behavior_ids": [
+        "expected.req_constraint_constraint_c892bd4482"
+      ],
+      "max_turns": 10,
+      "difficulty": "medium",
+      "metadata": {}
+    }
+  ],
+  "requirement_coverage": {
+    "req.constraint.constraint_c892bd4482": [
+      "scn.happy_path.task_outbound_3e6cb8b975_1",
+      "scn.metamorphic.task_outbound_3e6cb8b975_12"
+    ],
+    "req.exception.exception_697bf5a797": [
+      "scn.main_flow.task_outbound_3e6cb8b975_2"
+    ],
+    "req.task.objective": [
+      "scn.main_flow.task_outbound_3e6cb8b975_3"
+    ],
+    "req.constraint.constraint_7ccef9e4f5": [
+      "scn.main_flow.task_outbound_3e6cb8b975_4"
+    ],
+    "req.exception.exception_bb1f6c6a7f": [
+      "scn.exception.task_outbound_3e6cb8b975_5"
+    ],
+    "req.flow.flow_67bd694b30": [
+      "scn.exception.task_outbound_3e6cb8b975_6"
+    ],
+    "req.flow.flow_a83995c81b": [
+      "scn.exception.task_outbound_3e6cb8b975_7"
+    ],
+    "req.flow.flow_c56ed82ee8": [
+      "scn.faq_probe.task_outbound_3e6cb8b975_8_faq"
+    ],
+    "req.flow.opening_greeting": [
+      "scn.faq_probe.task_outbound_3e6cb8b975_9"
+    ],
+    "req.knowledge.knowledge_868f5d048c": [
+      "scn.constraint_risk.task_outbound_3e6cb8b975_10"
+    ],
+    "req.knowledge.knowledge_8ccf56f397": [
+      "scn.constraint_risk.task_outbound_3e6cb8b975_11"
+    ]
+  },
+  "flow_node_coverage": {
+    "flow.1.step_a83995c81b": [
+      "scn.faq_probe.task_outbound_3e6cb8b975_9"
+    ],
+    "flow.2.step_c56ed82ee8": [
+      "scn.exception.task_outbound_3e6cb8b975_7"
+    ],
+    "flow.3.step_67bd694b30": [
+      "scn.faq_probe.task_outbound_3e6cb8b975_8_faq"
+    ],
+    "flow.4.step_697bf5a797": [
+      "scn.exception.task_outbound_3e6cb8b975_6"
+    ]
+  },
+  "branch_coverage": {
+    "branch.flow.flow_697bf5a797": [
+      "scn.exception.task_outbound_3e6cb8b975_6"
+    ]
+  },
+  "faq_coverage": {
+    "faq.knowledge.knowledge_868f5d048c": [
+      "scn.constraint_risk.task_outbound_3e6cb8b975_10"
+    ],
+    "faq.knowledge.knowledge_8ccf56f397": [
+      "scn.constraint_risk.task_outbound_3e6cb8b975_11"
+    ]
+  },
+  "risk_coverage": {
+    "req.constraint.constraint_7ccef9e4f5": [
+      "scn.main_flow.task_outbound_3e6cb8b975_4"
+    ],
+    "req.exception.exception_697bf5a797": [
+      "scn.main_flow.task_outbound_3e6cb8b975_2"
+    ],
+    "req.constraint.constraint_c892bd4482": [
+      "scn.happy_path.task_outbound_3e6cb8b975_1",
+      "scn.metamorphic.task_outbound_3e6cb8b975_12"
+    ],
+    "req.exception.exception_bb1f6c6a7f": [
+      "scn.exception.task_outbound_3e6cb8b975_5"
+    ]
+  },
+  "uncovered_requirement_ids": []
+}

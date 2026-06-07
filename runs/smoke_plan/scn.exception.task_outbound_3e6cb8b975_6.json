@@ -1,0 +1,46 @@
+{
+  "scenario_id": "scn.exception.task_outbound_3e6cb8b975_6",
+  "task_id": "task_outbound_3e6cb8b975",
+  "scenario_name": "用户忙碌或开车",
+  "scenario_type": "exception",
+  "persona": {
+    "persona_id": "persona_exception_006",
+    "role": "called_user",
+    "age_range": "30-40",
+    "gender": "unknown",
+    "attitude": "busy",
+    "knowledge_level": "unaware",
+    "speaking_style": "colloquial",
+    "common_working_hours": "workday_daytime",
+    "working_location": "on_the_road"
+  },
+  "user_prior_conditions": [
+    "用户正在开车",
+    "用户无法继续通话"
+  ],
+  "hidden_goal": "Trigger and evaluate: req.flow.flow_67bd694b30",
+  "trigger_plan": {
+    "intent": "用户忙碌或开车",
+    "steps": [
+      "Use action say_driving",
+      "Use action end_call"
+    ],
+    "required_user_actions": [
+      "say_driving",
+      "end_call"
+    ],
+    "stop_conditions": [
+      "covered requirements triggered",
+      "max_turns reached"
+    ]
+  },
+  "covered_requirement_ids": [
+    "req.flow.flow_67bd694b30"
+  ],
+  "expected_behavior_ids": [
+    "expected.req_flow_flow_67bd694b30"
+  ],
+  "max_turns": 10,
+  "difficulty": "medium",
+  "metadata": {}
+}

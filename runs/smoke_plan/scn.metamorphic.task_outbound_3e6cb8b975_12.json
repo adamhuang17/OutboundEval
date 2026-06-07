@@ -1,0 +1,46 @@
+{
+  "scenario_id": "scn.metamorphic.task_outbound_3e6cb8b975_12",
+  "task_id": "task_outbound_3e6cb8b975",
+  "scenario_name": "换说法变体",
+  "scenario_type": "metamorphic",
+  "persona": {
+    "persona_id": "persona_metamorphic_012",
+    "role": "called_user",
+    "age_range": "30-40",
+    "gender": "unknown",
+    "attitude": "questioning",
+    "knowledge_level": "unaware",
+    "speaking_style": "interrupting",
+    "common_working_hours": "workday_daytime",
+    "working_location": "office"
+  },
+  "user_prior_conditions": [
+    "用户表达顺序变化",
+    "用户情绪略有波动"
+  ],
+  "hidden_goal": "Trigger and evaluate: req.constraint.constraint_c892bd4482",
+  "trigger_plan": {
+    "intent": "换说法变体",
+    "steps": [
+      "Use action interrupt",
+      "Use action ask_faq"
+    ],
+    "required_user_actions": [
+      "interrupt",
+      "ask_faq"
+    ],
+    "stop_conditions": [
+      "covered requirements triggered",
+      "max_turns reached"
+    ]
+  },
+  "covered_requirement_ids": [
+    "req.constraint.constraint_c892bd4482"
+  ],
+  "expected_behavior_ids": [
+    "expected.req_constraint_constraint_c892bd4482"
+  ],
+  "max_turns": 10,
+  "difficulty": "medium",
+  "metadata": {}
+}

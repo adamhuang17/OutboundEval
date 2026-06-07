@@ -1,0 +1,13 @@
+- scenario_type: happy_path
+  name: 正常配合确认合同
+  prior_conditions: ["用户愿意沟通", "用户能确认是否可配送"]
+  actions: ["answer_yes", "ask_faq"]
+- scenario_type: exception
+  name: 用户正在开车
+  prior_conditions: ["用户正在开车", "用户无法继续通话"]
+  actions: ["say_driving", "end_call"]
+- scenario_type: constraint_risk
+  name: 用户追问奖励费用
+  prior_conditions: ["用户担心奖励", "用户追问费用"]
+  actions: ["ask_faq", "ask_out_of_scope"]
+

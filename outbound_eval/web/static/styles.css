@@ -1,0 +1,46 @@
+:root {
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --ink: #1f2933;
+  --muted: #687385;
+  --line: #d8dee8;
+  --accent: #0f766e;
+  --accent-2: #7c2d12;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 Arial, "Microsoft YaHei", sans-serif; }
+.shell { min-height: 100vh; display: grid; grid-template-columns: 220px 1fr; }
+.rail { background: #ffffff; border-right: 1px solid var(--line); padding: 18px 14px; display: flex; flex-direction: column; gap: 8px; }
+.brand { font-weight: 700; font-size: 18px; margin-bottom: 12px; }
+.tab { height: 38px; border: 1px solid transparent; background: transparent; text-align: left; padding: 0 12px; border-radius: 6px; color: var(--ink); cursor: pointer; }
+.tab.active, .tab:hover { border-color: var(--line); background: #edf7f5; color: var(--accent); }
+.workspace { padding: 22px; overflow: auto; }
+.panel { display: none; max-width: 1180px; margin: 0 auto; }
+.panel.active { display: block; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+h1 { font-size: 22px; margin: 0 0 12px; letter-spacing: 0; }
+header h1 { margin: 0; }
+button { border: 1px solid var(--accent); background: var(--accent); color: white; border-radius: 6px; height: 34px; padding: 0 14px; cursor: pointer; }
+button.secondary { background: white; color: var(--accent); }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(240px, 1fr)); gap: 12px; }
+label { display: grid; gap: 6px; color: var(--muted); }
+label.short { width: 160px; margin-bottom: 16px; }
+input, textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); padding: 9px 10px; font: inherit; }
+textarea { min-height: 460px; resize: vertical; font-family: Consolas, "Microsoft YaHei", monospace; }
+pre { white-space: pre-wrap; background: #111827; color: #f9fafb; border-radius: 6px; padding: 14px; overflow: auto; max-height: 420px; }
+.matrix, #badcaseList { display: grid; gap: 10px; }
+.row { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
+.row strong { color: var(--accent-2); }
+iframe { width: 100%; height: 640px; border: 1px solid var(--line); border-radius: 6px; background: white; }
+.split { grid-template-columns: 360px 1fr; gap: 18px; }
+.split.active { display: grid; }
+.timeline { display: grid; gap: 8px; }
+.turn { border: 1px solid var(--line); border-radius: 6px; padding: 10px; background: white; cursor: pointer; }
+.turn:hover { border-color: var(--accent); }
+@media (max-width: 760px) {
+  .shell { grid-template-columns: 1fr; }
+  .rail { position: sticky; top: 0; z-index: 2; flex-direction: row; overflow-x: auto; }
+  .brand { display: none; }
+  .grid, .split.active { grid-template-columns: 1fr; }
+}
+

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OutboundEval OS</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail">
+      <div class="brand">OutboundEval OS</div>
+      <button class="tab active" data-tab="model">模型</button>
+      <button class="tab" data-tab="compile">编译</button>
+      <button class="tab" data-tab="coverage">覆盖</button>
+      <button class="tab" data-tab="runs">运行</button>
+      <button class="tab" data-tab="report">报告</button>
+      <button class="tab" data-tab="replay">回放</button>
+      <button class="tab" data-tab="badcase">Badcase</button>
+      <button class="tab" data-tab="golden">Golden</button>
+    </aside>
+    <main class="workspace">
+      <section id="model" class="panel active">
+        <header><h1>模型配置</h1><button id="testModel">测试连接</button></header>
+        <div class="grid">
+          <label>Base URL<input id="baseUrl" value="https://dashscope.aliyuncs.com/compatible-mode/v1"></label>
+          <label>Model<input id="modelName" value="qwen-turbo"></label>
+          <label>API Key<input id="apiKey" type="password"></label>
+          <label>Temperature<input id="temperature" type="number" step="0.1" value="0.2"></label>
+          <label>Max Tokens<input id="maxTokens" type="number" value="512"></label>
+          <label>Timeout<input id="timeoutSeconds" type="number" value="30"></label>
+        </div>
+        <pre id="modelResult"></pre>
+      </section>
+
+      <section id="compile" class="panel">
+        <header><h1>任务编译</h1><button id="compileTask">编译 TaskSpec</button></header>
+        <textarea id="instruction" spellcheck="false"># Role
+外呼客服
+
+# Task
+通知骑手飞毛腿合同即将生效，并确认是否可以按要求配送。
+
+# Opening Line
+您好，我是美团外卖客服，想和您确认飞毛腿合同配送安排。
+
+# Call Flow
+1. 先表明身份和来电目的。
+2. 通知合同生效事项。
+3. 确认骑手是否可以配送。
+4. 如果用户正在开车，应提醒安全并礼貌结束。
+
+# Knowledge Points (FAQ)
+Q: 一天需要多少单？
+A: 以 X/Y/Z/W 规则为准，不得自行编造订单数。
+
+# Constraints
+- 不得承诺额外奖励。
+- 回复尽量简短。</textarea>
+        <pre id="compileResult"></pre>
+      </section>
+
+      <section id="coverage" class="panel">
+        <header><h1>场景覆盖</h1><button id="planScenarios">生成场景</button></header>
+        <label class="short">Budget<input id="budget" type="number" value="12"></label>
+        <div id="coverageMatrix" class="matrix"></div>
+      </section>
+
+      <section id="runs" class="panel">
+        <header><h1>评测运行</h1><div><button id="startRun">启动 Run</button> <button id="refreshStatus" class="secondary">刷新</button></div></header>
+        <label class="short">Attempts<input id="attempts" type="number" value="1"></label>
+        <pre id="statusResult"></pre>
+      </section>
+
+      <section id="report" class="panel">
+        <header><h1>报告查看</h1><button id="renderReport">渲染报告</button></header>
+        <label>Run ID<input id="reportRunId"></label>
+        <iframe id="reportFrame" title="report"></iframe>
+      </section>
+
+      <section id="replay" class="panel split">
+        <div>
+          <h1>Episode Replay</h1>
+          <div id="turnTimeline" class="timeline"></div>
+        </div>
+        <div>
+          <h1>Judge Evidence</h1>
+          <pre id="judgeEvidence"></pre>
+        </div>
+      </section>
+
+      <section id="badcase" class="panel">
+        <header><h1>Badcase Library</h1><button id="loadBadcases">加载</button></header>
+        <div id="badcaseList"></div>
+      </section>
+
+      <section id="golden" class="panel">
+        <header><h1>Golden Set</h1><button id="seedGolden">生成样例</button></header>
+        <pre id="goldenResult"></pre>
+      </section>
+    </main>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

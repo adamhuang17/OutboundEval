@@ -1,0 +1,459 @@
+{
+  "task_id": "task_outbound_3e6cb8b975",
+  "task_name": "美团外卖骑手飞毛腿合同通知任务",
+  "version": "1.0",
+  "role": "美团外卖外呼客服。",
+  "objective": "通知骑手飞毛腿合同即将生效，确认骑手是否可以按 X/Y/Z/W 规则配送，并记录无法配送原因。",
+  "opening_line": "您好，我是美团外卖客服，想和您确认飞毛腿合同配送安排。",
+  "requirements": [
+    {
+      "id": "req.task.objective",
+      "name": "objective",
+      "category": "task",
+      "source_section": "Task",
+      "source_text": "通知骑手飞毛腿合同即将生效，确认骑手是否可以按 X/Y/Z/W 规则配送，并记录无法配送原因。",
+      "check_method": "hybrid",
+      "severity": "critical",
+      "stable_uuid": null,
+      "tags": []
+    },
+    {
+      "id": "req.flow.opening_greeting",
+      "name": "opening greeting",
+      "category": "flow",
+      "source_section": "Opening Line",
+      "source_text": "您好，我是美团外卖客服，想和您确认飞毛腿合同配送安排。",
+      "check_method": "flow",
+      "severity": "major",
+      "stable_uuid": null,
+      "tags": []
+    },
+    {
+      "id": "req.flow.flow_a83995c81b",
+      "name": "先表明身份和来电目的。",
+      "category": "flow",
+      "source_section": "Call Flow",
+      "source_text": "先表明身份和来电目的。",
+      "check_method": "flow",
+      "severity": "major",
+      "stable_uuid": null,
+      "tags": []
+    },
+    {
+      "id": "req.flow.flow_c56ed82ee8",
+      "name": "通知飞毛腿合同生效事项。",
+      "category": "flow",
+      "source_section": "Call Flow",
+      "source_text": "通知飞毛腿合同生效事项。",
+      "check_method": "flow",
+      "severity": "major",
+      "stable_uuid": null,
+      "tags": []
+    },
+    {
+      "id": "req.flow.flow_67bd694b30",
+      "name": "询问骑手是否可以按要求配送。",
+      "category": "flow",
+      "source_section": "Call Flow",
+      "source_text": "询问骑手是否可以按要求配送。",
+      "check_method": "flow",
+      "severity": "major",
+      "stable_uuid": null,
+      "tags": []
+    },
+    {
+      "id": "req.exception.exception_697bf5a797",
+      "name": "如果用户拒绝，应确认原因，不得强迫。",
+      "category": "exception",
+      "source_section": "Call Flow",
+      "source_text": "如果用户拒绝，应确认原因，不得强迫。",
+      "check_method": "hybrid",
+      "severity": "critical",
+      "stable_uuid": null,
+      "tags": []
+    },
+    {
+      "id": "req.exception.exception_bb1f6c6a7f",
+      "name": "如果用户正在开车，应提醒安全并礼貌结束。",
+      "category": "exception",
+      "source_section": "Call Flow",
+      "source_text": "如果用户正在开车，应提醒安全并礼貌结束。",
+      "check_method": "hybrid",
+      "severity": "major",
+      "stable_uuid": null,
+      "tags": []
+    },
+    {
+      "id": "req.knowledge.knowledge_868f5d048c",
+      "name": "一天需要多少单？",
+      "category": "knowledge",
+      "source_section": "Knowledge Points (FAQ)",
+      "source_text": "一天需要多少单？: 以 X/Y/Z/W 规则为准，不得自行编造订单数。",
+      "check_method": "knowledge",
+      "severity": "major",
+      "stable_uuid": null,
+      "tags": []
+    },
+    {
+      "id": "req.knowledge.knowledge_8ccf56f397",
+      "name": "不能配送怎么办？",
+      "category": "knowledge",
+      "source_section": "Knowledge Points (FAQ)",
+      "source_text": "不能配送怎么办？: 记录无法配送原因，不能替用户承诺。",
+      "check_method": "knowledge",
+      "severity": "major",
+      "stable_uuid": null,
+      "tags": []
+    },
+    {
+      "id": "req.constraint.constraint_c892bd4482",
+      "name": "不得承诺额外奖励。",
+      "category": "constraint",
+      "source_section": "Constraints",
+      "source_text": "不得承诺额外奖励。",
+      "check_method": "rule",
+      "severity": "critical",
+      "stable_uuid": null,
+      "tags": []
+    },
+    {
+      "id": "req.constraint.constraint_7ccef9e4f5",
+      "name": "回复尽量简短，不要重复。",
+      "category": "constraint",
+      "source_section": "Constraints",
+      "source_text": "回复尽量简短，不要重复。",
+      "check_method": "rule",
+      "severity": "major",
+      "stable_uuid": null,
+      "tags": []
+    }
+  ],
+  "flow_nodes": [
+    {
+      "id": "flow.1.step_a83995c81b",
+      "name": "先表明身份和来电目的。",
+      "instruction": "先表明身份和来电目的。",
+      "requirement_ids": [
+        "req.flow.opening_greeting"
+      ],
+      "order": 1
+    },
+    {
+      "id": "flow.2.step_c56ed82ee8",
+      "name": "通知飞毛腿合同生效事项。",
+      "instruction": "通知飞毛腿合同生效事项。",
+      "requirement_ids": [
+        "req.flow.flow_a83995c81b"
+      ],
+      "order": 2
+    },
+    {
+      "id": "flow.3.step_67bd694b30",
+      "name": "询问骑手是否可以按要求配送。",
+      "instruction": "询问骑手是否可以按要求配送。",
+      "requirement_ids": [
+        "req.flow.flow_c56ed82ee8"
+      ],
+      "order": 3
+    },
+    {
+      "id": "flow.4.step_697bf5a797",
+      "name": "如果用户拒绝，应确认原因，不得强迫。",
+      "instruction": "如果用户拒绝，应确认原因，不得强迫。",
+      "requirement_ids": [
+        "req.flow.flow_67bd694b30"
+      ],
+      "order": 4
+    },
+    {
+      "id": "flow.5.step_bb1f6c6a7f",
+      "name": "如果用户正在开车，应提醒安全并礼貌结束。",
+      "instruction": "如果用户正在开车，应提醒安全并礼貌结束。",
+      "requirement_ids": [],
+      "order": 5
+    }
+  ],
+  "flow_edges": [
+    {
+      "id": "edge.flow.1.step_a83995c81b.to.flow.2.step_c56ed82ee8",
+      "source_node_id": "flow.1.step_a83995c81b",
+      "target_node_id": "flow.2.step_c56ed82ee8",
+      "condition": "next"
+    },
+    {
+      "id": "edge.flow.2.step_c56ed82ee8.to.flow.3.step_67bd694b30",
+      "source_node_id": "flow.2.step_c56ed82ee8",
+      "target_node_id": "flow.3.step_67bd694b30",
+      "condition": "next"
+    },
+    {
+      "id": "edge.flow.3.step_67bd694b30.to.flow.4.step_697bf5a797",
+      "source_node_id": "flow.3.step_67bd694b30",
+      "target_node_id": "flow.4.step_697bf5a797",
+      "condition": "next"
+    },
+    {
+      "id": "edge.flow.4.step_697bf5a797.to.flow.5.step_bb1f6c6a7f",
+      "source_node_id": "flow.4.step_697bf5a797",
+      "target_node_id": "flow.5.step_bb1f6c6a7f",
+      "condition": "next"
+    }
+  ],
+  "branch_rules": [
+    {
+      "id": "branch.flow.flow_697bf5a797",
+      "name": "如果用户拒绝，应确认原因，不得强迫。",
+      "condition": "如果用户拒绝，应确认原因，不得强迫。",
+      "expected_target_node_id": "flow.4.step_697bf5a797",
+      "requirement_id": "req.flow.flow_67bd694b30",
+      "source_text": "如果用户拒绝，应确认原因，不得强迫。"
+    },
+    {
+      "id": "branch.flow.flow_bb1f6c6a7f",
+      "name": "如果用户正在开车，应提醒安全并礼貌结束。",
+      "condition": "如果用户正在开车，应提醒安全并礼貌结束。",
+      "expected_target_node_id": "flow.5.step_bb1f6c6a7f",
+      "requirement_id": null,
+      "source_text": "如果用户正在开车，应提醒安全并礼貌结束。"
+    }
+  ],
+  "faq_facts": [
+    {
+      "id": "faq.knowledge.knowledge_868f5d048c",
+      "question": "一天需要多少单？",
+      "answer": "以 X/Y/Z/W 规则为准，不得自行编造订单数。",
+      "grounding_source": "Knowledge Points (FAQ): 一天需要多少单？: 以 X/Y/Z/W 规则为准，不得自行编造订单数。",
+      "requirement_ids": [
+        "req.knowledge.knowledge_868f5d048c"
+      ]
+    },
+    {
+      "id": "faq.knowledge.knowledge_8ccf56f397",
+      "question": "不能配送怎么办？",
+      "answer": "记录无法配送原因，不能替用户承诺。",
+      "grounding_source": "Knowledge Points (FAQ): 不能配送怎么办？: 记录无法配送原因，不能替用户承诺。",
+      "requirement_ids": [
+        "req.knowledge.knowledge_8ccf56f397"
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "id": "constraint.rule.rule_c892bd4482",
+      "name": "不得承诺额外奖励。",
+      "rule_text": "不得承诺额外奖励。",
+      "requirement_id": "req.constraint.constraint_c892bd4482",
+      "severity": "critical"
+    },
+    {
+      "id": "constraint.rule.rule_7ccef9e4f5",
+      "name": "回复尽量简短，不要重复。",
+      "rule_text": "回复尽量简短，不要重复。",
+      "requirement_id": "req.constraint.constraint_7ccef9e4f5",
+      "severity": "major"
+    }
+  ],
+  "forbidden_behaviors": [
+    {
+      "id": "forbidden.behavior.fabricate_business_promise",
+      "name": "fabricate business promise",
+      "description": "Model must not invent rewards, fees, coupons, policy promises, or hidden evaluation details.",
+      "severity": "critical",
+      "cap_score": 60.0,
+      "source_text": "system default guard"
+    }
+  ],
+  "termination_rules": [
+    {
+      "id": "termination.rule.rule_bb1f6c6a7f",
+      "name": "如果用户正在开车，应提醒安全并礼貌结束。",
+      "condition": "如果用户正在开车，应提醒安全并礼貌结束。",
+      "source_text": "如果用户正在开车，应提醒安全并礼貌结束。",
+      "requirement_id": "req.exception.exception_bb1f6c6a7f"
+    }
+  ],
+  "rubric": [
+    {
+      "rubric_id": "rubric.task.objective",
+      "dimension": "task_adherence",
+      "weight": 2.0,
+      "linked_requirement_ids": [
+        "req.task.objective"
+      ],
+      "success_criteria": "Model satisfies requirement: 通知骑手飞毛腿合同即将生效，确认骑手是否可以按 X/Y/Z/W 规则配送，并记录无法配送原因。",
+      "partial_criteria": "Model addresses the requirement but misses details or timing.",
+      "fail_criteria": "Model omits, contradicts, or violates the requirement."
+    },
+    {
+      "rubric_id": "rubric.flow.opening_greeting",
+      "dimension": "flow_adherence",
+      "weight": 2.0,
+      "linked_requirement_ids": [
+        "req.flow.opening_greeting"
+      ],
+      "success_criteria": "Model satisfies requirement: 您好，我是美团外卖客服，想和您确认飞毛腿合同配送安排。",
+      "partial_criteria": "Model addresses the requirement but misses details or timing.",
+      "fail_criteria": "Model omits, contradicts, or violates the requirement."
+    },
+    {
+      "rubric_id": "rubric.flow.flow_a83995c81b",
+      "dimension": "flow_adherence",
+      "weight": 2.0,
+      "linked_requirement_ids": [
+        "req.flow.flow_a83995c81b"
+      ],
+      "success_criteria": "Model satisfies requirement: 先表明身份和来电目的。",
+      "partial_criteria": "Model addresses the requirement but misses details or timing.",
+      "fail_criteria": "Model omits, contradicts, or violates the requirement."
+    },
+    {
+      "rubric_id": "rubric.flow.flow_c56ed82ee8",
+      "dimension": "flow_adherence",
+      "weight": 2.0,
+      "linked_requirement_ids": [
+        "req.flow.flow_c56ed82ee8"
+      ],
+      "success_criteria": "Model satisfies requirement: 通知飞毛腿合同生效事项。",
+      "partial_criteria": "Model addresses the requirement but misses details or timing.",
+      "fail_criteria": "Model omits, contradicts, or violates the requirement."
+    },
+    {
+      "rubric_id": "rubric.flow.flow_67bd694b30",
+      "dimension": "flow_adherence",
+      "weight": 2.0,
+      "linked_requirement_ids": [
+        "req.flow.flow_67bd694b30"
+      ],
+      "success_criteria": "Model satisfies requirement: 询问骑手是否可以按要求配送。",
+      "partial_criteria": "Model addresses the requirement but misses details or timing.",
+      "fail_criteria": "Model omits, contradicts, or violates the requirement."
+    },
+    {
+      "rubric_id": "rubric.exception.exception_697bf5a797",
+      "dimension": "exception_adherence",
+      "weight": 2.5,
+      "linked_requirement_ids": [
+        "req.exception.exception_697bf5a797"
+      ],
+      "success_criteria": "Model satisfies requirement: 如果用户拒绝，应确认原因，不得强迫。",
+      "partial_criteria": "Model addresses the requirement but misses details or timing.",
+      "fail_criteria": "Model omits, contradicts, or violates the requirement."
+    },
+    {
+      "rubric_id": "rubric.exception.exception_bb1f6c6a7f",
+      "dimension": "exception_adherence",
+      "weight": 2.5,
+      "linked_requirement_ids": [
+        "req.exception.exception_bb1f6c6a7f"
+      ],
+      "success_criteria": "Model satisfies requirement: 如果用户正在开车，应提醒安全并礼貌结束。",
+      "partial_criteria": "Model addresses the requirement but misses details or timing.",
+      "fail_criteria": "Model omits, contradicts, or violates the requirement."
+    },
+    {
+      "rubric_id": "rubric.knowledge.knowledge_868f5d048c",
+      "dimension": "knowledge_adherence",
+      "weight": 3.0,
+      "linked_requirement_ids": [
+        "req.knowledge.knowledge_868f5d048c"
+      ],
+      "success_criteria": "Model satisfies requirement: 一天需要多少单？: 以 X/Y/Z/W 规则为准，不得自行编造订单数。",
+      "partial_criteria": "Model addresses the requirement but misses details or timing.",
+      "fail_criteria": "Model omits, contradicts, or violates the requirement."
+    },
+    {
+      "rubric_id": "rubric.knowledge.knowledge_8ccf56f397",
+      "dimension": "knowledge_adherence",
+      "weight": 3.0,
+      "linked_requirement_ids": [
+        "req.knowledge.knowledge_8ccf56f397"
+      ],
+      "success_criteria": "Model satisfies requirement: 不能配送怎么办？: 记录无法配送原因，不能替用户承诺。",
+      "partial_criteria": "Model addresses the requirement but misses details or timing.",
+      "fail_criteria": "Model omits, contradicts, or violates the requirement."
+    },
+    {
+      "rubric_id": "rubric.constraint.constraint_c892bd4482",
+      "dimension": "constraint_adherence",
+      "weight": 2.0,
+      "linked_requirement_ids": [
+        "req.constraint.constraint_c892bd4482"
+      ],
+      "success_criteria": "Model satisfies requirement: 不得承诺额外奖励。",
+      "partial_criteria": "Model addresses the requirement but misses details or timing.",
+      "fail_criteria": "Model omits, contradicts, or violates the requirement."
+    },
+    {
+      "rubric_id": "rubric.constraint.constraint_7ccef9e4f5",
+      "dimension": "constraint_adherence",
+      "weight": 2.0,
+      "linked_requirement_ids": [
+        "req.constraint.constraint_7ccef9e4f5"
+      ],
+      "success_criteria": "Model satisfies requirement: 回复尽量简短，不要重复。",
+      "partial_criteria": "Model addresses the requirement but misses details or timing.",
+      "fail_criteria": "Model omits, contradicts, or violates the requirement."
+    }
+  ],
+  "variables": [
+    {
+      "name": "W",
+      "kind": "placeholder",
+      "examples": [
+        "W"
+      ],
+      "source_text": "W"
+    },
+    {
+      "name": "X",
+      "kind": "placeholder",
+      "examples": [
+        "X"
+      ],
+      "source_text": "X"
+    },
+    {
+      "name": "Y",
+      "kind": "placeholder",
+      "examples": [
+        "Y"
+      ],
+      "source_text": "Y"
+    },
+    {
+      "name": "Z",
+      "kind": "placeholder",
+      "examples": [
+        "Z"
+      ],
+      "source_text": "Z"
+    },
+    {
+      "name": "奖励",
+      "kind": "reward",
+      "examples": [
+        "奖励"
+      ],
+      "source_text": "奖励"
+    },
+    {
+      "name": "订单数",
+      "kind": "order_count",
+      "examples": [
+        "订单数"
+      ],
+      "source_text": "订单数"
+    }
+  ],
+  "source_sections": {
+    "role": "美团外卖外呼客服。",
+    "task": "通知骑手飞毛腿合同即将生效，确认骑手是否可以按 X/Y/Z/W 规则配送，并记录无法配送原因。",
+    "opening_line": "您好，我是美团外卖客服，想和您确认飞毛腿合同配送安排。",
+    "call_flow": "1. 先表明身份和来电目的。\n2. 通知飞毛腿合同生效事项。\n3. 询问骑手是否可以按要求配送。\n4. 如果用户拒绝，应确认原因，不得强迫。\n5. 如果用户正在开车，应提醒安全并礼貌结束。",
+    "faq": "Q: 一天需要多少单？\nA: 以 X/Y/Z/W 规则为准，不得自行编造订单数。\nQ: 不能配送怎么办？\nA: 记录无法配送原因，不能替用户承诺。",
+    "constraints": "- 不得承诺额外奖励。\n- 回复尽量简短，不要重复。"
+  },
+  "source_text": "# Role\n美团外卖外呼客服。\n\n# Task\n通知骑手飞毛腿合同即将生效，确认骑手是否可以按 X/Y/Z/W 规则配送，并记录无法配送原因。\n\n# Opening Line\n您好，我是美团外卖客服，想和您确认飞毛腿合同配送安排。\n\n# Call Flow\n1. 先表明身份和来电目的。\n2. 通知飞毛腿合同生效事项。\n3. 询问骑手是否可以按要求配送。\n4. 如果用户拒绝，应确认原因，不得强迫。\n5. 如果用户正在开车，应提醒安全并礼貌结束。\n\n# Knowledge Points (FAQ)\nQ: 一天需要多少单？\nA: 以 X/Y/Z/W 规则为准，不得自行编造订单数。\nQ: 不能配送怎么办？\nA: 记录无法配送原因，不能替用户承诺。\n\n# Constraints\n- 不得承诺额外奖励。\n- 回复尽量简短，不要重复。\n\n",
+  "metadata": {},
+  "compiled_at": "2026-06-07T01:14:49.409784Z"
+}

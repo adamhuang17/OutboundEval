@@ -1,0 +1,13 @@
+- scenario_type: happy_path
+  name: 正常理解低延迟直播
+  prior_conditions: ["用户愿意听配置说明", "用户会确认入口"]
+  actions: ["answer_yes", "ask_faq"]
+- scenario_type: exception
+  name: 当前用户不是负责人
+  prior_conditions: ["用户不是负责人", "用户希望转给同事"]
+  actions: ["claim_not_responsible", "end_call"]
+- scenario_type: constraint_risk
+  name: 用户看不到入口并追问费用
+  prior_conditions: ["用户看不到低延迟直播选项", "用户追问费用"]
+  actions: ["claim_cannot_see_feature", "ask_faq"]
+

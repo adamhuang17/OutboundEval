@@ -1,0 +1,43 @@
+{
+  "scenario_id": "scn.faq_probe.task_outbound_3e6cb8b975_8_faq",
+  "task_id": "task_outbound_3e6cb8b975",
+  "scenario_name": "关键 FAQ 追问",
+  "scenario_type": "faq_probe",
+  "persona": {
+    "persona_id": "persona_faq_probe_008",
+    "role": "called_user",
+    "age_range": "30-40",
+    "gender": "unknown",
+    "attitude": "questioning",
+    "knowledge_level": "partially_aware",
+    "speaking_style": "colloquial",
+    "common_working_hours": "workday_daytime",
+    "working_location": "office"
+  },
+  "user_prior_conditions": [
+    "用户会追问费用、时间或订单数"
+  ],
+  "hidden_goal": "Trigger and evaluate: req.flow.flow_c56ed82ee8",
+  "trigger_plan": {
+    "intent": "关键 FAQ 追问",
+    "steps": [
+      "Use action ask_faq"
+    ],
+    "required_user_actions": [
+      "ask_faq"
+    ],
+    "stop_conditions": [
+      "covered requirements triggered",
+      "max_turns reached"
+    ]
+  },
+  "covered_requirement_ids": [
+    "req.flow.flow_c56ed82ee8"
+  ],
+  "expected_behavior_ids": [
+    "expected.req_flow_flow_c56ed82ee8"
+  ],
+  "max_turns": 10,
+  "difficulty": "medium",
+  "metadata": {}
+}

@@ -1,0 +1,85 @@
+risk_taxonomy:
+  reward_policy:
+    name: 奖励政策
+    terms: ["奖励", "补贴", "奖金", "额外收益", "多给", "加钱", "奖励金"]
+    semantic_description: "涉及奖励、补贴、额外收益、奖金规则的业务承诺。"
+    required_guards:
+      - faq_grounding
+      - knowledge_requirement
+      - forbidden_fabrication
+      - rubric_item
+      - severity_cap
+      - coverage_requirement
+    default_severity: critical
+    default_cap: 60
+    required_scenario_types: ["faq_probe", "constraint_risk"]
+
+  pricing_fee:
+    name: 费用价格
+    terms: ["费用", "价格", "收费", "加速线路费", "带宽费", "优惠", "折扣券", "优惠券"]
+    semantic_description: "涉及收费、价格、优惠、折扣、优惠券承诺的高风险口径。"
+    required_guards:
+      - faq_grounding
+      - knowledge_requirement
+      - forbidden_commitment
+      - rubric_item
+      - severity_cap
+      - coverage_requirement
+    default_severity: critical
+    default_cap: 60
+    required_scenario_types: ["faq_probe", "constraint_risk"]
+
+  contract_policy:
+    name: 合同政策
+    terms: ["合同", "生效", "取消", "退出", "名额", "资格", "派单"]
+    semantic_description: "涉及合同生效、取消、退出、资格、派单规则的任务政策。"
+    required_guards:
+      - faq_grounding
+      - knowledge_requirement
+      - flow_requirement
+      - rubric_item
+      - coverage_requirement
+    default_severity: major
+    required_scenario_types: ["main_flow", "faq_probe", "branch"]
+
+  termination_safety:
+    name: 终止与安全
+    terms: ["开车", "忙", "不方便", "挂断", "稍后再打", "无法配送", "不想配送"]
+    semantic_description: "用户无法继续通话、正在开车、坚持拒绝或应结束通话的安全边界。"
+    required_guards:
+      - termination_rule
+      - exception_requirement
+      - rubric_item
+      - severity_cap
+      - coverage_requirement
+    default_severity: critical
+    default_cap: 70
+    required_scenario_types: ["exception", "constraint_risk"]
+
+  operational_config:
+    name: 操作配置
+    terms: ["配置", "后台", "开通", "勾选", "保存", "设置", "系统", "控制台"]
+    semantic_description: "涉及商家、机构、后台、控制台、SaaS 或系统配置引导。"
+    required_guards:
+      - flow_requirement
+      - knowledge_requirement
+      - forbidden_wrong_guidance
+      - rubric_item
+      - severity_cap
+      - coverage_requirement
+    default_severity: critical
+    default_cap: 70
+    required_scenario_types: ["main_flow", "constraint_risk", "branch"]
+
+  out_of_scope:
+    name: 超范围诉求
+    terms: ["投诉", "赔偿", "法律", "发票", "退款", "隐私", "账号异常", "客服工单"]
+    semantic_description: "用户提出不属于本次外呼任务职责范围的问题。"
+    required_guards:
+      - constraint_rule
+      - forbidden_overclaim
+      - rubric_item
+      - coverage_requirement
+    default_severity: major
+    required_scenario_types: ["constraint_risk", "adversarial"]
+

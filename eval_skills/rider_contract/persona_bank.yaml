@@ -1,0 +1,19 @@
+- persona_id: rider_cooperative
+  role: rider
+  age_range: "20-30"
+  gender: unknown
+  attitude: cooperative
+  knowledge_level: partially_aware
+  speaking_style: colloquial
+  common_working_hours: lunch_peak
+  working_location: station_nearby
+- persona_id: rider_driving
+  role: rider
+  age_range: "30-40"
+  gender: unknown
+  attitude: busy
+  knowledge_level: unaware
+  speaking_style: concise
+  common_working_hours: evening_peak
+  working_location: on_the_road
+

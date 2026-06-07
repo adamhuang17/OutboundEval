@@ -1,0 +1,12 @@
+domain: rider_contract
+required_entities:
+  - rider_name
+  - contract_name
+  - effective_date
+  - required_orders
+risk_terms:
+  - 奖励
+  - 费用
+  - 开车
+  - 拒绝
+

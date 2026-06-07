@@ -1,0 +1,19 @@
+- persona_id: merchant_admin
+  role: merchant_operator
+  age_range: "30-40"
+  gender: unknown
+  attitude: questioning
+  knowledge_level: partially_aware
+  speaking_style: concise
+  common_working_hours: workday_daytime
+  working_location: campus_office
+- persona_id: merchant_not_responsible
+  role: staff
+  age_range: "20-30"
+  gender: unknown
+  attitude: skeptical
+  knowledge_level: unaware
+  speaking_style: interrupting
+  common_working_hours: workday_daytime
+  working_location: office
+

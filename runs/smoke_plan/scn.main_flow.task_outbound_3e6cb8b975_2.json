@@ -1,0 +1,45 @@
+{
+  "scenario_id": "scn.main_flow.task_outbound_3e6cb8b975_2",
+  "task_id": "task_outbound_3e6cb8b975",
+  "scenario_name": "主流程确认",
+  "scenario_type": "main_flow",
+  "persona": {
+    "persona_id": "persona_main_flow_002",
+    "role": "called_user",
+    "age_range": "30-40",
+    "gender": "unknown",
+    "attitude": "questioning",
+    "knowledge_level": "unaware",
+    "speaking_style": "colloquial",
+    "common_working_hours": "workday_daytime",
+    "working_location": "office"
+  },
+  "user_prior_conditions": [
+    "用户会追问一句细节"
+  ],
+  "hidden_goal": "Trigger and evaluate: req.exception.exception_697bf5a797",
+  "trigger_plan": {
+    "intent": "主流程确认",
+    "steps": [
+      "Use action answer_yes",
+      "Use action ask_faq"
+    ],
+    "required_user_actions": [
+      "answer_yes",
+      "ask_faq"
+    ],
+    "stop_conditions": [
+      "covered requirements triggered",
+      "max_turns reached"
+    ]
+  },
+  "covered_requirement_ids": [
+    "req.exception.exception_697bf5a797"
+  ],
+  "expected_behavior_ids": [
+    "expected.req_exception_exception_697bf5a797"
+  ],
+  "max_turns": 10,
+  "difficulty": "medium",
+  "metadata": {}
+}

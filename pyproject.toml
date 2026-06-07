@@ -1,0 +1,22 @@
+[project]
+name = "outbound-eval-os"
+version = "0.1.0"
+description = "OutboundEval OS: complex outbound-call instruction-following evaluation platform."
+requires-python = ">=3.11"
+dependencies = [
+  "aiohttp",
+  "fastapi",
+  "jinja2",
+  "openai",
+  "psycopg[binary]",
+  "pydantic>=2",
+  "PyYAML",
+  "redis",
+  "uvicorn",
+]
+
+[project.scripts]
+outbound-eval = "outbound_eval.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["outbound_eval*"]

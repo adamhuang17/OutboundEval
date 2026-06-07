@@ -1,0 +1,493 @@
+{
+  "run_id": "run_20260607_015046_32c3b",
+  "generated_at": "2026-06-07T01:50:46.196237Z",
+  "task_summary": {
+    "task_id": "task_outbound_3e6cb8b975",
+    "task_name": "美团外卖骑手飞毛腿合同通知任务",
+    "requirements": 11
+  },
+  "model_summary": {
+    "provider": "openai_compatible",
+    "base_url": "local://safe-target",
+    "api_key": "loc***nly",
+    "model_name": "local-safe-target",
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "timeout_seconds": 30,
+    "connection_tested": true
+  },
+  "coverage_summary": {
+    "requirement_coverage_rate": 1.0,
+    "requirement_coverage": {
+      "req.constraint.constraint_c892bd4482": [
+        "scn.happy_path.task_outbound_3e6cb8b975_1"
+      ],
+      "req.flow.opening_greeting": [
+        "scn.happy_path.task_outbound_3e6cb8b975_1"
+      ],
+      "req.exception.exception_697bf5a797": [
+        "scn.main_flow.task_outbound_3e6cb8b975_2"
+      ],
+      "req.knowledge.knowledge_868f5d048c": [
+        "scn.main_flow.task_outbound_3e6cb8b975_2"
+      ],
+      "req.task.objective": [
+        "scn.main_flow.task_outbound_3e6cb8b975_3"
+      ],
+      "req.knowledge.knowledge_8ccf56f397": [
+        "scn.main_flow.task_outbound_3e6cb8b975_3"
+      ],
+      "req.constraint.constraint_7ccef9e4f5": [
+        "scn.main_flow.task_outbound_3e6cb8b975_4"
+      ],
+      "req.exception.exception_bb1f6c6a7f": [
+        "scn.exception.task_outbound_3e6cb8b975_5"
+      ],
+      "req.flow.flow_67bd694b30": [
+        "scn.exception.task_outbound_3e6cb8b975_6"
+      ],
+      "req.flow.flow_a83995c81b": [
+        "scn.exception.task_outbound_3e6cb8b975_7"
+      ],
+      "req.flow.flow_c56ed82ee8": [
+        "scn.faq_probe.task_outbound_3e6cb8b975_8_faq"
+      ]
+    },
+    "flow_node_coverage": {
+      "flow.1.step_a83995c81b": [
+        "scn.happy_path.task_outbound_3e6cb8b975_1"
+      ],
+      "flow.2.step_c56ed82ee8": [
+        "scn.exception.task_outbound_3e6cb8b975_7"
+      ],
+      "flow.3.step_67bd694b30": [
+        "scn.faq_probe.task_outbound_3e6cb8b975_8_faq"
+      ],
+      "flow.4.step_697bf5a797": [
+        "scn.exception.task_outbound_3e6cb8b975_6"
+      ]
+    },
+    "branch_coverage": {
+      "branch.flow.flow_697bf5a797": [
+        "scn.exception.task_outbound_3e6cb8b975_6"
+      ]
+    },
+    "faq_coverage": {
+      "faq.knowledge.knowledge_868f5d048c": [
+        "scn.main_flow.task_outbound_3e6cb8b975_2"
+      ],
+      "faq.knowledge.knowledge_8ccf56f397": [
+        "scn.main_flow.task_outbound_3e6cb8b975_3"
+      ]
+    },
+    "risk_coverage": {
+      "req.exception.exception_bb1f6c6a7f": [
+        "scn.exception.task_outbound_3e6cb8b975_5"
+      ],
+      "req.constraint.constraint_7ccef9e4f5": [
+        "scn.main_flow.task_outbound_3e6cb8b975_4"
+      ],
+      "req.exception.exception_697bf5a797": [
+        "scn.main_flow.task_outbound_3e6cb8b975_2"
+      ],
+      "req.constraint.constraint_c892bd4482": [
+        "scn.happy_path.task_outbound_3e6cb8b975_1"
+      ]
+    },
+    "uncovered_requirement_ids": []
+  },
+  "score_summary": {
+    "run_id": "run_20260607_015046_32c3b",
+    "episode_id": null,
+    "total_score": 11.5,
+    "possible_score": 20.5,
+    "normalized_score": 56.1,
+    "caps_applied": [
+      {
+        "reason": "FAQ answer hit_rate=0.00.",
+        "cap_score": 80.0,
+        "severity": "major",
+        "judge_event_id": "judge.knowledge.d5e6b7d91a"
+      },
+      {
+        "reason": "Flow keyword coverage=0.00.",
+        "cap_score": 80.0,
+        "severity": "major",
+        "judge_event_id": "judge.flow.fcc1d6ca62"
+      },
+      {
+        "reason": "Flow keyword coverage=0.00.",
+        "cap_score": 80.0,
+        "severity": "major",
+        "judge_event_id": "judge.flow.2619d70b80"
+      },
+      {
+        "reason": "Flow keyword coverage=0.00.",
+        "cap_score": 80.0,
+        "severity": "major",
+        "judge_event_id": "judge.flow.a9fad67ba0"
+      }
+    ],
+    "per_dimension": {
+      "flow_adherence": 2.0,
+      "constraint_adherence": 4.0,
+      "knowledge_adherence": 3.0,
+      "exception_adherence": 2.5
+    },
+    "items": [
+      {
+        "id": "score.aa5b419e30",
+        "run_id": "run_20260607_015046_32c3b",
+        "episode_id": "",
+        "rubric_item_id": "rubric.flow.opening_greeting",
+        "requirement_id": "req.flow.opening_greeting",
+        "weight": 2.0,
+        "verdict": "pass",
+        "raw_score": 1.0,
+        "weighted_score": 2.0,
+        "evidence_judge_ids": [
+          "judge.RuleChecker.5b773cae39",
+          "judge.flow.13a710e625"
+        ]
+      },
+      {
+        "id": "score.3fe13dc23e",
+        "run_id": "run_20260607_015046_32c3b",
+        "episode_id": "",
+        "rubric_item_id": "rubric.constraint.constraint_c892bd4482",
+        "requirement_id": "req.constraint.constraint_c892bd4482",
+        "weight": 2.0,
+        "verdict": "pass",
+        "raw_score": 1.0,
+        "weighted_score": 2.0,
+        "evidence_judge_ids": [
+          "judge.constraint.b91a0423b1"
+        ]
+      },
+      {
+        "id": "score.f6f267ef6e",
+        "run_id": "run_20260607_015046_32c3b",
+        "episode_id": "",
+        "rubric_item_id": "rubric.knowledge.knowledge_868f5d048c",
+        "requirement_id": "req.knowledge.knowledge_868f5d048c",
+        "weight": 3.0,
+        "verdict": "pass",
+        "raw_score": 1.0,
+        "weighted_score": 3.0,
+        "evidence_judge_ids": [
+          "judge.knowledge.eca0c198c3"
+        ]
+      },
+      {
+        "id": "score.8ca52a1afd",
+        "run_id": "run_20260607_015046_32c3b",
+        "episode_id": "",
+        "rubric_item_id": "rubric.knowledge.knowledge_8ccf56f397",
+        "requirement_id": "req.knowledge.knowledge_8ccf56f397",
+        "weight": 3.0,
+        "verdict": "fail",
+        "raw_score": 0.0,
+        "weighted_score": 0.0,
+        "evidence_judge_ids": [
+          "judge.knowledge.d5e6b7d91a"
+        ]
+      },
+      {
+        "id": "score.4f7f58fd47",
+        "run_id": "run_20260607_015046_32c3b",
+        "episode_id": "",
+        "rubric_item_id": "rubric.constraint.constraint_7ccef9e4f5",
+        "requirement_id": "req.constraint.constraint_7ccef9e4f5",
+        "weight": 2.0,
+        "verdict": "pass",
+        "raw_score": 1.0,
+        "weighted_score": 2.0,
+        "evidence_judge_ids": [
+          "judge.constraint.68641ccf13"
+        ]
+      },
+      {
+        "id": "score.1917e87878",
+        "run_id": "run_20260607_015046_32c3b",
+        "episode_id": "",
+        "rubric_item_id": "rubric.exception.exception_bb1f6c6a7f",
+        "requirement_id": "req.exception.exception_bb1f6c6a7f",
+        "weight": 2.5,
+        "verdict": "pass",
+        "raw_score": 1.0,
+        "weighted_score": 2.5,
+        "evidence_judge_ids": [
+          "judge.exception.b46498b814"
+        ]
+      },
+      {
+        "id": "score.ff2f0f9a55",
+        "run_id": "run_20260607_015046_32c3b",
+        "episode_id": "",
+        "rubric_item_id": "rubric.flow.flow_67bd694b30",
+        "requirement_id": "req.flow.flow_67bd694b30",
+        "weight": 2.0,
+        "verdict": "fail",
+        "raw_score": 0.0,
+        "weighted_score": 0.0,
+        "evidence_judge_ids": [
+          "judge.flow.fcc1d6ca62"
+        ]
+      },
+      {
+        "id": "score.815b08103c",
+        "run_id": "run_20260607_015046_32c3b",
+        "episode_id": "",
+        "rubric_item_id": "rubric.flow.flow_a83995c81b",
+        "requirement_id": "req.flow.flow_a83995c81b",
+        "weight": 2.0,
+        "verdict": "fail",
+        "raw_score": 0.0,
+        "weighted_score": 0.0,
+        "evidence_judge_ids": [
+          "judge.flow.2619d70b80"
+        ]
+      },
+      {
+        "id": "score.942c4f5816",
+        "run_id": "run_20260607_015046_32c3b",
+        "episode_id": "",
+        "rubric_item_id": "rubric.flow.flow_c56ed82ee8",
+        "requirement_id": "req.flow.flow_c56ed82ee8",
+        "weight": 2.0,
+        "verdict": "fail",
+        "raw_score": 0.0,
+        "weighted_score": 0.0,
+        "evidence_judge_ids": [
+          "judge.flow.a9fad67ba0"
+        ]
+      }
+    ]
+  },
+  "severity_caps": [
+    {
+      "reason": "FAQ answer hit_rate=0.00.",
+      "cap_score": 80.0,
+      "severity": "major",
+      "judge_event_id": "judge.knowledge.d5e6b7d91a"
+    },
+    {
+      "reason": "Flow keyword coverage=0.00.",
+      "cap_score": 80.0,
+      "severity": "major",
+      "judge_event_id": "judge.flow.fcc1d6ca62"
+    },
+    {
+      "reason": "Flow keyword coverage=0.00.",
+      "cap_score": 80.0,
+      "severity": "major",
+      "judge_event_id": "judge.flow.2619d70b80"
+    },
+    {
+      "reason": "Flow keyword coverage=0.00.",
+      "cap_score": 80.0,
+      "severity": "major",
+      "judge_event_id": "judge.flow.a9fad67ba0"
+    }
+  ],
+  "episode_summaries": [
+    {
+      "episode_id": "ep_scn.happy_path.task_outbound_3e6cb8b975_1_attempt_1",
+      "scenario_id": "scn.happy_path.task_outbound_3e6cb8b975_1",
+      "status": "completed",
+      "turns": 7,
+      "termination_reason": "simulator_stop"
+    },
+    {
+      "episode_id": "ep_scn.main_flow.task_outbound_3e6cb8b975_2_attempt_1",
+      "scenario_id": "scn.main_flow.task_outbound_3e6cb8b975_2",
+      "status": "completed",
+      "turns": 7,
+      "termination_reason": "simulator_stop"
+    },
+    {
+      "episode_id": "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1",
+      "scenario_id": "scn.main_flow.task_outbound_3e6cb8b975_3",
+      "status": "completed",
+      "turns": 7,
+      "termination_reason": "simulator_stop"
+    },
+    {
+      "episode_id": "ep_scn.main_flow.task_outbound_3e6cb8b975_4_attempt_1",
+      "scenario_id": "scn.main_flow.task_outbound_3e6cb8b975_4",
+      "status": "completed",
+      "turns": 7,
+      "termination_reason": "simulator_stop"
+    },
+    {
+      "episode_id": "ep_scn.exception.task_outbound_3e6cb8b975_5_attempt_1",
+      "scenario_id": "scn.exception.task_outbound_3e6cb8b975_5",
+      "status": "completed",
+      "turns": 7,
+      "termination_reason": "simulator_stop"
+    },
+    {
+      "episode_id": "ep_scn.exception.task_outbound_3e6cb8b975_6_attempt_1",
+      "scenario_id": "scn.exception.task_outbound_3e6cb8b975_6",
+      "status": "completed",
+      "turns": 3,
+      "termination_reason": "simulator_stop"
+    },
+    {
+      "episode_id": "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1",
+      "scenario_id": "scn.exception.task_outbound_3e6cb8b975_7",
+      "status": "completed",
+      "turns": 7,
+      "termination_reason": "simulator_stop"
+    },
+    {
+      "episode_id": "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1",
+      "scenario_id": "scn.faq_probe.task_outbound_3e6cb8b975_8_faq",
+      "status": "completed",
+      "turns": 7,
+      "termination_reason": "simulator_stop"
+    }
+  ],
+  "failed_items": [
+    {
+      "judge_id": "judge.knowledge.d5e6b7d91a",
+      "requirement_id": "req.knowledge.knowledge_8ccf56f397",
+      "rubric_item_id": "rubric.knowledge.knowledge_8ccf56f397",
+      "episode_id": "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1",
+      "turn_ids": [
+        "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1.t4",
+        "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1.t6"
+      ],
+      "verdict": "fail",
+      "severity": "major",
+      "reason": "FAQ answer hit_rate=0.00.",
+      "evidence_quotes": [
+        "您好，我是美团外卖客服。飞毛腿合同将生效，请确认是否可以按 X/Y/Z/W 规则配送。",
+        "我不能承诺额外奖励、优惠或费用政策，只能按本次通知口径说明。"
+      ]
+    },
+    {
+      "judge_id": "judge.flow.fcc1d6ca62",
+      "requirement_id": "req.flow.flow_67bd694b30",
+      "rubric_item_id": "rubric.flow.flow_67bd694b30",
+      "episode_id": "ep_scn.exception.task_outbound_3e6cb8b975_6_attempt_1",
+      "turn_ids": [
+        "ep_scn.exception.task_outbound_3e6cb8b975_6_attempt_1.t2"
+      ],
+      "verdict": "fail",
+      "severity": "major",
+      "reason": "Flow keyword coverage=0.00.",
+      "evidence_quotes": [
+        "您在开车先注意安全，我这边不继续打扰，稍后再联系。"
+      ]
+    },
+    {
+      "judge_id": "judge.flow.2619d70b80",
+      "requirement_id": "req.flow.flow_a83995c81b",
+      "rubric_item_id": "rubric.flow.flow_a83995c81b",
+      "episode_id": "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1",
+      "turn_ids": [
+        "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1.t4",
+        "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1.t6"
+      ],
+      "verdict": "fail",
+      "severity": "major",
+      "reason": "Flow keyword coverage=0.00.",
+      "evidence_quotes": [
+        "我不能承诺额外奖励、优惠或费用政策，只能按本次通知口径说明。",
+        "我不能承诺额外奖励、优惠或费用政策，只能按本次通知口径说明。"
+      ]
+    },
+    {
+      "judge_id": "judge.flow.a9fad67ba0",
+      "requirement_id": "req.flow.flow_c56ed82ee8",
+      "rubric_item_id": "rubric.flow.flow_c56ed82ee8",
+      "episode_id": "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1",
+      "turn_ids": [
+        "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1.t4",
+        "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1.t6"
+      ],
+      "verdict": "fail",
+      "severity": "major",
+      "reason": "Flow keyword coverage=0.00.",
+      "evidence_quotes": [
+        "我不能承诺额外奖励、优惠或费用政策，只能按本次通知口径说明。",
+        "我不能承诺额外奖励、优惠或费用政策，只能按本次通知口径说明。"
+      ]
+    }
+  ],
+  "evidence_index": {
+    "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1.t4": {
+      "episode_id": "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1",
+      "turn_id": "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1.t4",
+      "quote": "您好，我是美团外卖客服。飞毛腿合同将生效，请确认是否可以按 X/Y/Z/W 规则配送。"
+    },
+    "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1.t6": {
+      "episode_id": "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1",
+      "turn_id": "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1.t6",
+      "quote": "我不能承诺额外奖励、优惠或费用政策，只能按本次通知口径说明。"
+    },
+    "ep_scn.exception.task_outbound_3e6cb8b975_6_attempt_1.t2": {
+      "episode_id": "ep_scn.exception.task_outbound_3e6cb8b975_6_attempt_1",
+      "turn_id": "ep_scn.exception.task_outbound_3e6cb8b975_6_attempt_1.t2",
+      "quote": "您在开车先注意安全，我这边不继续打扰，稍后再联系。"
+    },
+    "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1.t4": {
+      "episode_id": "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1",
+      "turn_id": "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1.t4",
+      "quote": "我不能承诺额外奖励、优惠或费用政策，只能按本次通知口径说明。"
+    },
+    "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1.t6": {
+      "episode_id": "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1",
+      "turn_id": "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1.t6",
+      "quote": "我不能承诺额外奖励、优惠或费用政策，只能按本次通知口径说明。"
+    },
+    "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1.t4": {
+      "episode_id": "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1",
+      "turn_id": "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1.t4",
+      "quote": "我不能承诺额外奖励、优惠或费用政策，只能按本次通知口径说明。"
+    },
+    "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1.t6": {
+      "episode_id": "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1",
+      "turn_id": "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1.t6",
+      "quote": "我不能承诺额外奖励、优惠或费用政策，只能按本次通知口径说明。"
+    }
+  },
+  "improvement_suggestions": [
+    {
+      "requirement_id": "req.knowledge.knowledge_8ccf56f397",
+      "episode_id": "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1",
+      "turn_ids": [
+        "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1.t4",
+        "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1.t6"
+      ],
+      "suggestion": "Revise behavior for req.knowledge.knowledge_8ccf56f397: FAQ answer hit_rate=0.00."
+    },
+    {
+      "requirement_id": "req.flow.flow_67bd694b30",
+      "episode_id": "ep_scn.exception.task_outbound_3e6cb8b975_6_attempt_1",
+      "turn_ids": [
+        "ep_scn.exception.task_outbound_3e6cb8b975_6_attempt_1.t2"
+      ],
+      "suggestion": "Revise behavior for req.flow.flow_67bd694b30: Flow keyword coverage=0.00."
+    },
+    {
+      "requirement_id": "req.flow.flow_a83995c81b",
+      "episode_id": "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1",
+      "turn_ids": [
+        "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1.t4",
+        "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1.t6"
+      ],
+      "suggestion": "Revise behavior for req.flow.flow_a83995c81b: Flow keyword coverage=0.00."
+    },
+    {
+      "requirement_id": "req.flow.flow_c56ed82ee8",
+      "episode_id": "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1",
+      "turn_ids": [
+        "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1.t4",
+        "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1.t6"
+      ],
+      "suggestion": "Revise behavior for req.flow.flow_c56ed82ee8: Flow keyword coverage=0.00."
+    }
+  ]
+}

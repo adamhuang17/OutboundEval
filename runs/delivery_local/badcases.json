@@ -1,0 +1,93 @@
+[
+  {
+    "id": "badcase.08f695a6a8",
+    "run_id": "run_20260607_015046_32c3b",
+    "episode_id": "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1",
+    "task_id": "task_outbound_3e6cb8b975",
+    "scenario_id": "scn.main_flow.task_outbound_3e6cb8b975_3",
+    "failure_type": "fail",
+    "severity": "major",
+    "requirement_ids": [
+      "req.knowledge.knowledge_8ccf56f397"
+    ],
+    "evidence_turn_ids": [
+      "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1.t4",
+      "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1.t6"
+    ],
+    "summary": "FAQ answer hit_rate=0.00.",
+    "replay_config": {
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_id": "scn.main_flow.task_outbound_3e6cb8b975_3",
+      "episode_id": "ep_scn.main_flow.task_outbound_3e6cb8b975_3_attempt_1",
+      "rejudge_only": true
+    }
+  },
+  {
+    "id": "badcase.5283614e5e",
+    "run_id": "run_20260607_015046_32c3b",
+    "episode_id": "ep_scn.exception.task_outbound_3e6cb8b975_6_attempt_1",
+    "task_id": "task_outbound_3e6cb8b975",
+    "scenario_id": "scn.exception.task_outbound_3e6cb8b975_6",
+    "failure_type": "fail",
+    "severity": "major",
+    "requirement_ids": [
+      "req.flow.flow_67bd694b30"
+    ],
+    "evidence_turn_ids": [
+      "ep_scn.exception.task_outbound_3e6cb8b975_6_attempt_1.t2"
+    ],
+    "summary": "Flow keyword coverage=0.00.",
+    "replay_config": {
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_id": "scn.exception.task_outbound_3e6cb8b975_6",
+      "episode_id": "ep_scn.exception.task_outbound_3e6cb8b975_6_attempt_1",
+      "rejudge_only": true
+    }
+  },
+  {
+    "id": "badcase.1c7ce02e38",
+    "run_id": "run_20260607_015046_32c3b",
+    "episode_id": "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1",
+    "task_id": "task_outbound_3e6cb8b975",
+    "scenario_id": "scn.exception.task_outbound_3e6cb8b975_7",
+    "failure_type": "fail",
+    "severity": "major",
+    "requirement_ids": [
+      "req.flow.flow_a83995c81b"
+    ],
+    "evidence_turn_ids": [
+      "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1.t4",
+      "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1.t6"
+    ],
+    "summary": "Flow keyword coverage=0.00.",
+    "replay_config": {
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_id": "scn.exception.task_outbound_3e6cb8b975_7",
+      "episode_id": "ep_scn.exception.task_outbound_3e6cb8b975_7_attempt_1",
+      "rejudge_only": true
+    }
+  },
+  {
+    "id": "badcase.f1e8313a15",
+    "run_id": "run_20260607_015046_32c3b",
+    "episode_id": "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1",
+    "task_id": "task_outbound_3e6cb8b975",
+    "scenario_id": "scn.faq_probe.task_outbound_3e6cb8b975_8_faq",
+    "failure_type": "fail",
+    "severity": "major",
+    "requirement_ids": [
+      "req.flow.flow_c56ed82ee8"
+    ],
+    "evidence_turn_ids": [
+      "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1.t4",
+      "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1.t6"
+    ],
+    "summary": "Flow keyword coverage=0.00.",
+    "replay_config": {
+      "task_id": "task_outbound_3e6cb8b975",
+      "scenario_id": "scn.faq_probe.task_outbound_3e6cb8b975_8_faq",
+      "episode_id": "ep_scn.faq_probe.task_outbound_3e6cb8b975_8_faq_attempt_1",
+      "rejudge_only": true
+    }
+  }
+]

@@ -1,0 +1,43 @@
+{
+  "scenario_id": "scn.exception.task_outbound_3e6cb8b975_7",
+  "task_id": "task_outbound_3e6cb8b975",
+  "scenario_name": "非负责人",
+  "scenario_type": "exception",
+  "persona": {
+    "persona_id": "persona_exception_007",
+    "role": "called_user",
+    "age_range": "30-40",
+    "gender": "unknown",
+    "attitude": "busy",
+    "knowledge_level": "unaware",
+    "speaking_style": "colloquial",
+    "common_working_hours": "workday_daytime",
+    "working_location": "office"
+  },
+  "user_prior_conditions": [
+    "用户不是负责人"
+  ],
+  "hidden_goal": "Trigger and evaluate: req.flow.flow_a83995c81b",
+  "trigger_plan": {
+    "intent": "非负责人",
+    "steps": [
+      "Use action claim_not_responsible"
+    ],
+    "required_user_actions": [
+      "claim_not_responsible"
+    ],
+    "stop_conditions": [
+      "covered requirements triggered",
+      "max_turns reached"
+    ]
+  },
+  "covered_requirement_ids": [
+    "req.flow.flow_a83995c81b"
+  ],
+  "expected_behavior_ids": [
+    "expected.req_flow_flow_a83995c81b"
+  ],
+  "max_turns": 10,
+  "difficulty": "medium",
+  "metadata": {}
+}

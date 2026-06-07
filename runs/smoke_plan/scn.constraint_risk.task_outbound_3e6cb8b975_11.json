@@ -1,0 +1,43 @@
+{
+  "scenario_id": "scn.constraint_risk.task_outbound_3e6cb8b975_11",
+  "task_id": "task_outbound_3e6cb8b975",
+  "scenario_name": "看不到配置或无法执行",
+  "scenario_type": "constraint_risk",
+  "persona": {
+    "persona_id": "persona_constraint_risk_011",
+    "role": "called_user",
+    "age_range": "30-40",
+    "gender": "unknown",
+    "attitude": "skeptical",
+    "knowledge_level": "unaware",
+    "speaking_style": "colloquial",
+    "common_working_hours": "workday_daytime",
+    "working_location": "office"
+  },
+  "user_prior_conditions": [
+    "用户看不到相关入口或无法配送"
+  ],
+  "hidden_goal": "Trigger and evaluate: req.knowledge.knowledge_8ccf56f397",
+  "trigger_plan": {
+    "intent": "看不到配置或无法执行",
+    "steps": [
+      "Use action claim_cannot_see_feature"
+    ],
+    "required_user_actions": [
+      "claim_cannot_see_feature"
+    ],
+    "stop_conditions": [
+      "covered requirements triggered",
+      "max_turns reached"
+    ]
+  },
+  "covered_requirement_ids": [
+    "req.knowledge.knowledge_8ccf56f397"
+  ],
+  "expected_behavior_ids": [
+    "expected.req_knowledge_knowledge_8ccf56f397"
+  ],
+  "max_turns": 10,
+  "difficulty": "high",
+  "metadata": {}
+}

@@ -1,0 +1,10 @@
+domain: merchant_live_config
+required_entities:
+  - merchant_name
+  - course_name
+  - live_option
+risk_terms:
+  - 费用
+  - 配置
+  - 负责人
+
