@@ -10,14 +10,16 @@ from outbound_eval.domain.schemas_task import TaskSpec
 class CompletenessAuditor:
     async def audit(self, raw_instruction: str, task_spec: TaskSpec) -> list[SpecFinding]:
         findings: list[SpecFinding] = []
-        if ("FAQ" in raw_instruction or "Knowledge" in raw_instruction or "知识" in raw_instruction) and not task_spec.faq_facts:
+        if (
+            "FAQ" in raw_instruction or "Knowledge" in raw_instruction or "知识" in raw_instruction
+        ) and not task_spec.knowledge_facts and not task_spec.faq_facts:
             findings.append(
                 SpecFinding(
                     source=FindingSource.COMPLETENESS,
                     severity=Severity.MAJOR,
-                    requirement_ref="faq_facts",
-                    detail="Raw instruction includes FAQ/knowledge section but TaskSpec has no FAQFact.",
-                    suggested_fix="Parse FAQ section into FAQFact with grounding_source.",
+                    requirement_ref="knowledge_facts",
+                    detail="Raw instruction includes FAQ/knowledge section but TaskSpec has no KnowledgeFact.",
+                    suggested_fix="Parse knowledge sections into KnowledgeFact with source_text and source_node_id.",
                     decision=FindingDecision.AUTO_FIX,
                 )
             )
@@ -49,4 +51,3 @@ class CompletenessAuditor:
                 )
             )
         return findings
-

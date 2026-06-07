@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from itertools import cycle
 from typing import Any
 
 from outbound_eval.domain.enums import RequirementCategory, ScenarioType, Severity
@@ -8,22 +7,6 @@ from outbound_eval.domain.ids import semantic_id, slugify
 from outbound_eval.domain.schemas_scenario import CoverageMatrix, PersonaSpec, ScenarioSpec, TriggerPlan
 from outbound_eval.domain.schemas_task import RequirementItem, RiskCoverageRequirement, TaskSpec
 from outbound_eval.planner.risk_scenario_factory import RiskScenarioFactory
-
-
-DEFAULT_SCENARIO_BLUEPRINTS = [
-    (ScenarioType.HAPPY_PATH, "normal confirmation", ["user is cooperative", "user can confirm the flow"], ["answer_yes"]),
-    (ScenarioType.MAIN_FLOW, "main flow detail check", ["user asks one operational detail"], ["answer_yes", "ask_faq"]),
-    (ScenarioType.MAIN_FLOW, "short main flow", ["user is busy but willing to cooperate"], ["say_busy", "answer_yes"]),
-    (ScenarioType.MAIN_FLOW, "repeat key point", ["user asks the model to repeat the key point"], ["ask_faq"]),
-    (ScenarioType.EXCEPTION, "user refusal", ["user does not want to continue", "user clearly refuses"], ["refuse"]),
-    (ScenarioType.EXCEPTION, "driving or unavailable", ["user is driving", "user cannot continue the call"], ["say_driving", "end_call"]),
-    (ScenarioType.EXCEPTION, "wrong responsible person", ["user is not the responsible person"], ["claim_not_responsible"]),
-    (ScenarioType.FAQ_PROBE, "key faq probe", ["user asks about fee, time, quantity, or policy"], ["ask_faq"]),
-    (ScenarioType.FAQ_PROBE, "knowledge detail probe", ["user does not understand business terms"], ["ask_faq"]),
-    (ScenarioType.CONSTRAINT_RISK, "boundary question", ["user asks for discounts, rewards, or extra commitment"], ["ask_out_of_scope"]),
-    (ScenarioType.CONSTRAINT_RISK, "cannot see config", ["user cannot see the related entry or cannot perform an action"], ["claim_cannot_see_feature"]),
-    (ScenarioType.METAMORPHIC, "paraphrased flow", ["user changes expression order", "user emotion fluctuates slightly"], ["interrupt", "ask_faq"]),
-]
 
 
 class CoveragePlanner:
@@ -45,14 +28,13 @@ class CoveragePlanner:
         return CoverageQA(self.risk_factory).validate_or_autofill(task_spec, matrix, budget)
 
     def _generate_base_scenarios(self, task_spec: TaskSpec, budget: int) -> list[ScenarioSpec]:
-        blueprints = self._expand_blueprints(budget)
         high_value = self._prioritized_requirements(task_spec)
-        assignments = self._assign_requirements(high_value, len(blueprints))
         scenarios: list[ScenarioSpec] = []
-        for index, blueprint in enumerate(blueprints):
-            scenario_type, name, prior_conditions, actions = blueprint
-            covered = assignments[index] or [high_value[index % len(high_value)].id]
-            scenarios.append(self._scenario(task_spec, scenario_type, name, index + 1, prior_conditions, actions, covered))
+        if not high_value:
+            return scenarios
+        for index in range(budget):
+            requirement = high_value[index % len(high_value)]
+            scenarios.append(self._scenario(task_spec, requirement, index + 1))
         return scenarios
 
     def _ensure_risk_coverage(self, task_spec: TaskSpec, scenarios: list[ScenarioSpec]) -> list[ScenarioSpec]:
@@ -74,31 +56,10 @@ class CoveragePlanner:
         ranked = sorted(deduped.values(), key=lambda item: self._scenario_priority(task_spec, item))
         return ranked[:budget]
 
-    def _expand_blueprints(self, budget: int) -> list[tuple[ScenarioType, str, list[str], list[str]]]:
-        if budget <= len(DEFAULT_SCENARIO_BLUEPRINTS):
-            return DEFAULT_SCENARIO_BLUEPRINTS[:budget]
-        out = list(DEFAULT_SCENARIO_BLUEPRINTS)
-        extra_types = [ScenarioType.BRANCH, ScenarioType.FAQ_PROBE, ScenarioType.CONSTRAINT_RISK, ScenarioType.ADVERSARIAL]
-        while len(out) < budget:
-            scenario_type = extra_types[len(out) % len(extra_types)]
-            out.append((scenario_type, f"supplemental coverage {len(out) + 1}", ["user triggers an uncovered path"], ["ask_faq"]))
-        return out
-
     def _prioritized_requirements(self, task_spec: TaskSpec) -> list[RequirementItem]:
         requirements = list(task_spec.requirements)
         requirements.sort(key=lambda req: (0 if str(req.severity) == Severity.CRITICAL.value else 1, str(req.category), req.id))
         return requirements or task_spec.requirements
-
-    def _assign_requirements(self, requirements: list[RequirementItem], slots: int) -> list[list[str]]:
-        assignments = [[] for _ in range(slots)]
-        for index, req in enumerate(requirements):
-            assignments[index % slots].append(req.id)
-        if requirements:
-            req_cycle = cycle(requirements)
-            for bucket in assignments:
-                if not bucket:
-                    bucket.append(next(req_cycle).id)
-        return assignments
 
     def _persona(self, scenario_type: ScenarioType | str, index: int) -> PersonaSpec:
         scenario_type_value = self._value(scenario_type)
@@ -124,34 +85,54 @@ class CoveragePlanner:
     def _scenario(
         self,
         task_spec: TaskSpec,
-        scenario_type: ScenarioType,
-        name: str,
+        requirement: RequirementItem,
         index: int,
-        prior_conditions: list[str],
-        actions: list[str],
-        covered_requirement_ids: list[str],
     ) -> ScenarioSpec:
+        scenario_type = self._scenario_type_for(requirement)
         scenario_type_value = self._value(scenario_type)
-        scenario_id = semantic_id("scn", scenario_type_value, f"{task_spec.task_id}_{index}_{name}")
+        name = f"{requirement.name} coverage"
+        scenario_id = semantic_id("scn", scenario_type_value, f"{task_spec.task_id}_{index}_{requirement.id}_{requirement.name}")
         return ScenarioSpec(
             scenario_id=scenario_id,
             task_id=task_spec.task_id,
             scenario_name=name,
             scenario_type=scenario_type,
             persona=self._persona(scenario_type, index),
-            user_prior_conditions=prior_conditions,
-            hidden_goal=f"Trigger and evaluate: {', '.join(covered_requirement_ids)}",
+            user_prior_conditions=[f"User probes requirement {requirement.id}: {requirement.name}"],
+            hidden_goal=f"Trigger and evaluate requirement {requirement.id}: {requirement.source_text[:160]}",
             trigger_plan=TriggerPlan(
                 intent=name,
-                steps=[f"Use action {action}" for action in actions],
-                required_user_actions=actions,
+                steps=[f"Ask about or challenge requirement {requirement.id}", "Decide whether the answer satisfies the requirement"],
+                required_user_actions=self._actions_for(requirement),
                 stop_conditions=["covered requirements triggered", "max_turns reached"],
             ),
-            covered_requirement_ids=covered_requirement_ids,
-            expected_behavior_ids=[f"expected.{slugify(rid, 'req')}" for rid in covered_requirement_ids],
+            covered_requirement_ids=[requirement.id],
+            expected_behavior_ids=[f"expected.{slugify(requirement.id, 'req')}"],
             max_turns=10,
             difficulty="high" if scenario_type_value in {ScenarioType.CONSTRAINT_RISK.value, ScenarioType.ADVERSARIAL.value} else "medium",
         )
+
+    def _scenario_type_for(self, requirement: RequirementItem) -> ScenarioType:
+        category = self._value(requirement.category)
+        if category == RequirementCategory.KNOWLEDGE.value:
+            return ScenarioType.FAQ_PROBE
+        if category == RequirementCategory.CONSTRAINT.value:
+            return ScenarioType.CONSTRAINT_RISK
+        if category in {RequirementCategory.EXCEPTION.value, RequirementCategory.TERMINATION.value}:
+            return ScenarioType.EXCEPTION
+        if category == RequirementCategory.FLOW.value:
+            return ScenarioType.MAIN_FLOW
+        return ScenarioType.MAIN_FLOW
+
+    def _actions_for(self, requirement: RequirementItem) -> list[str]:
+        category = self._value(requirement.category)
+        if category == RequirementCategory.KNOWLEDGE.value:
+            return ["ask_detail", "end_call"]
+        if category == RequirementCategory.CONSTRAINT.value:
+            return ["challenge_constraint", "end_call"]
+        if category in {RequirementCategory.EXCEPTION.value, RequirementCategory.TERMINATION.value}:
+            return ["refuse", "end_call"]
+        return ["answer_yes", "ask_detail", "end_call"]
 
     def _coverage_matrix(self, task_spec: TaskSpec, scenarios: list[ScenarioSpec]) -> CoverageMatrix:
         req_coverage: dict[str, list[str]] = {}
@@ -182,6 +163,16 @@ class CoveragePlanner:
             ]
             for fact in task_spec.faq_facts
         }
+        faq_coverage.update(
+            {
+                fact.id: [
+                    scenario.scenario_id
+                    for scenario in scenarios
+                    if set(scenario.covered_requirement_ids) & set(fact.requirement_ids)
+                ]
+                for fact in task_spec.knowledge_facts
+            }
+        )
         risk_req_ids = {
             req.id
             for req in task_spec.requirements

@@ -3,7 +3,7 @@
 
 // ===== 全局状态 =====
 const state = {
-  modelsOk: { compiler: false, simulator: false, judge: false },
+  modelsOk: { compiler: false, target: false, simulator: false, judge: false },
   understanding: null,
   scenarioSet: null,
   selectedScenarios: new Set(),
@@ -48,6 +48,7 @@ document.querySelectorAll(".tab").forEach((btn) => {
 function getModelConfig(role) {
   const ids = {
     compiler: ["compilerUrl", "compilerModel", "compilerKey", "compilerTemp", "compilerMaxTokens", "compilerTimeout"],
+    target: ["targetUrl", "targetModel", "targetKey", "targetTemp", "targetMaxTokens", "targetTimeout"],
     simulator: ["simulatorUrl", "simulatorModel", "simulatorKey", "simulatorTemp", "simulatorMaxTokens", "simulatorTimeout"],
     judge: ["judgeUrl", "judgeModel", "judgeKey", "judgeTemp", "judgeMaxTokens", "judgeTimeout"],
   };
@@ -117,12 +118,13 @@ async function testAllModels() {
     const result = await post("/api/models/test-all", {
       configs: {
         compiler_model: getModelConfig("compiler"),
+        target_model: getModelConfig("target"),
         simulator_model: getModelConfig("simulator"),
         judge_model: getModelConfig("judge"),
       },
     });
-    const roleNames = { compiler: "编译模型", simulator: "模拟模型", judge: "评判模型" };
-    const roleKeys = ["compiler", "simulator", "judge"];
+    const roleNames = { compiler: "编译模型", target: "被测模型", simulator: "模拟模型", judge: "评判模型" };
+    const roleKeys = ["compiler", "target", "simulator", "judge"];
     result.details.forEach((d, i) => {
       const key = roleKeys[i];
       state.modelsOk[key] = d.ok;
@@ -158,8 +160,8 @@ async function testAllModels() {
 
 // ===== 检查模型是否全部通过 =====
 function checkModelsReady() {
-  if (!state.modelsOk.compiler || !state.modelsOk.simulator || !state.modelsOk.judge) {
-    alert("请先在「配置」页面测试全部三个 LLM 连接，确保全部通过后再继续。");
+  if (!state.modelsOk.compiler || !state.modelsOk.target || !state.modelsOk.simulator || !state.modelsOk.judge) {
+    alert("请先在「配置」页面测试全部四个 LLM 角色连接，确保全部通过后再继续。");
     showTab("setup");
     return false;
   }
@@ -376,6 +378,7 @@ async function startRun() {
       understanding: state.understanding,
       scenarios: selectedScenarios,
       compiler_model: getModelConfig("compiler"),
+      target_model: getModelConfig("target"),
       simulator_model: getModelConfig("simulator"),
       judge_model: getModelConfig("judge"),
     });
@@ -803,4 +806,3 @@ function escHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
-

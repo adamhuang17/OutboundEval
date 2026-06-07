@@ -13,6 +13,7 @@ from outbound_eval.domain.schemas_understanding import (
     PersonaSpec,
     ScenarioSet,
     ScenarioSpec,
+    ScenarioPlan,
     TaskUnderstanding,
 )
 from outbound_eval.llm.structured_client import StructuredLLMClient
@@ -81,6 +82,7 @@ class ScenarioBuilderLLM:
         persona: EvaluatorPersonaInput,
         scenario_count: int = 6,
         model_config: ModelConfig,
+        plan: ScenarioPlan | None = None,
     ) -> ScenarioSet:
         task_spec = understanding.task_spec
         task_id = task_spec.get("task_id", "task_unknown")
@@ -110,6 +112,13 @@ class ScenarioBuilderLLM:
 不便上下文: {persona.inconvenience_context or '无'}
 备注: {persona.extra_notes or '无'}"""
 
+        plan_summary = "\n".join(
+            f"- {item.id}: {item.title} type={item.scenario_type} priority={item.priority} "
+            f"judge_points={item.linked_judge_point_ids} requirements={item.linked_requirement_ids} "
+            f"intent={item.coverage_intent} persona_focus={item.persona_focus}"
+            for item in (plan.items if plan else [])
+        )
+
         user_content = f"""任务名称：{task_spec.get('task_name', '未命名')}
 任务目标：{task_spec.get('objective', '')}
 角色：{task_spec.get('role', '')}
@@ -124,6 +133,9 @@ class ScenarioBuilderLLM:
 {kf_summary or '（无）'}
 
 {persona_desc}
+
+覆盖计划（必须逐项落实；如为空则自行按 JudgePlan 规划）：
+{plan_summary or '（无）'}
 
 场景数量：{scenario_count}
 
@@ -144,13 +156,14 @@ class ScenarioBuilderLLM:
         draft: _ScenarioSetDraft = result.parsed
 
         scenarios = []
-        for raw in draft.scenarios:
+        for idx, raw in enumerate(draft.scenarios):
+            plan_item = plan.items[idx] if plan and idx < len(plan.items) else None
             raw_persona = raw.get("persona", {})
             spec = ScenarioSpec(
                 scenario_id=raw.get("scenario_id", f"scn_{uuid.uuid4().hex[:6]}"),
                 task_id=task_id,
-                title=raw.get("title", "无标题场景"),
-                scenario_type=raw.get("scenario_type", "main_flow"),
+                title=raw.get("title", plan_item.title if plan_item else "无标题场景"),
+                scenario_type=raw.get("scenario_type", plan_item.scenario_type if plan_item else "main_flow"),
                 persona=PersonaSpec(
                     identity=raw_persona.get("identity", persona.identity),
                     relationship_to_task=raw_persona.get("relationship_to_task", persona.relationship_to_task),
@@ -168,9 +181,13 @@ class ScenarioBuilderLLM:
                 expected_model_behavior=raw.get("expected_model_behavior", []),
                 forbidden_behavior=raw.get("forbidden_behavior", []),
                 stop_conditions=raw.get("stop_conditions", ["用户明确结束"]),
-                linked_judge_point_ids=raw.get("linked_judge_point_ids", []),
-                covered_requirement_ids=raw.get("covered_requirement_ids", []),
+                linked_judge_point_ids=raw.get("linked_judge_point_ids", plan_item.linked_judge_point_ids if plan_item else []),
+                covered_requirement_ids=raw.get("covered_requirement_ids", plan_item.linked_requirement_ids if plan_item else []),
                 max_turns=int(raw.get("max_turns", 8)),
+                metadata={
+                    "scenario_plan_id": plan_item.id if plan_item else None,
+                    "risk_coverage_requirement_ids": plan_item.linked_risk_coverage_ids if plan_item else [],
+                },
             )
             scenarios.append(spec)
 

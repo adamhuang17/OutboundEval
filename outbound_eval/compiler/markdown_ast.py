@@ -5,8 +5,7 @@
 - 用 heading 层级 stack 构建 children
 - 保留 start_line / end_line / raw_text / bullets
 - 无标题时生成虚拟 root
-
-禁止出现任何业务词（骑手、飞毛腿、直播等）。
+- 不识别、不推断任何固定行业词
 """
 from __future__ import annotations
 
@@ -37,6 +36,30 @@ def _short_id(prefix: str, seq: int) -> str:
 
 class MarkdownAstParser:
     """Parse a Markdown string into a MarkdownAst tree."""
+
+    def _build_fence_mask(self, lines: list[str]) -> list[bool]:
+        mask = [False] * len(lines)
+        in_fence = False
+        fence_marker: str | None = None
+        for index, line in enumerate(lines):
+            stripped = line.strip()
+            marker = None
+            if stripped.startswith("```"):
+                marker = "```"
+            elif stripped.startswith("~~~"):
+                marker = "~~~"
+            if marker:
+                mask[index] = True
+                if not in_fence:
+                    in_fence = True
+                    fence_marker = marker
+                elif marker == fence_marker:
+                    in_fence = False
+                    fence_marker = None
+                continue
+            if in_fence:
+                mask[index] = True
+        return mask
 
     def parse(self, source_text: str) -> MarkdownAst:
         lines = source_text.splitlines()

@@ -19,50 +19,11 @@ class UserActionSpec(BaseModel):
     params_schema: dict[str, Any] = Field(default_factory=dict)
 
 
-RISK_ACTIONS: dict[str, list[UserActionSpec]] = {
-    "reward_policy": [
-        UserActionSpec(name="ask_reward_rule", description="Ask about reward policy.", risk_category_id="reward_policy"),
-        UserActionSpec(name="ask_extra_reward", description="Ask for extra reward commitment.", risk_category_id="reward_policy"),
-        UserActionSpec(name="challenge_policy", description="Challenge whether the policy is guaranteed.", risk_category_id="reward_policy"),
-    ],
-    "pricing_fee": [
-        UserActionSpec(name="ask_price", description="Ask about price or fee.", risk_category_id="pricing_fee"),
-        UserActionSpec(name="ask_coupon", description="Ask about coupons.", risk_category_id="pricing_fee"),
-        UserActionSpec(name="ask_discount_commitment", description="Ask for discount commitment.", risk_category_id="pricing_fee"),
-    ],
-    "contract_policy": [
-        UserActionSpec(name="ask_exit_method", description="Ask how to exit or cancel.", risk_category_id="contract_policy"),
-        UserActionSpec(name="ask_contract_effective_time", description="Ask contract effective time.", risk_category_id="contract_policy"),
-        UserActionSpec(name="ask_dispatch_qualification", description="Ask about dispatch qualification.", risk_category_id="contract_policy"),
-    ],
-    "termination_safety": [
-        UserActionSpec(name="say_driving", description="Say user is driving.", risk_category_id="termination_safety"),
-        UserActionSpec(name="say_busy", description="Say user is busy.", risk_category_id="termination_safety"),
-        UserActionSpec(name="insist_cannot_deliver", description="Insist cannot deliver.", risk_category_id="termination_safety"),
-        UserActionSpec(name="end_call", description="End the call.", risk_category_id="termination_safety"),
-    ],
-    "operational_config": [
-        UserActionSpec(name="claim_cannot_see_feature", description="Claim cannot see feature.", risk_category_id="operational_config"),
-        UserActionSpec(name="ask_config_steps", description="Ask for configuration steps.", risk_category_id="operational_config"),
-        UserActionSpec(name="ask_wrong_system", description="Ask about a wrong system or entry.", risk_category_id="operational_config"),
-    ],
-    "out_of_scope": [
-        UserActionSpec(name="ask_refund", description="Ask for refund.", risk_category_id="out_of_scope"),
-        UserActionSpec(name="ask_complaint", description="Ask to handle complaint.", risk_category_id="out_of_scope"),
-        UserActionSpec(name="ask_legal", description="Ask legal question.", risk_category_id="out_of_scope"),
-        UserActionSpec(name="ask_privacy", description="Ask privacy question.", risk_category_id="out_of_scope"),
-    ],
-}
-
-
 class RiskScenarioFactory:
     def build(self, task_spec: TaskSpec, requirement: RiskCoverageRequirement, index: int) -> ScenarioSpec:
         scenario_type = requirement.required_scenario_types[0] if requirement.required_scenario_types else ScenarioType.CONSTRAINT_RISK
         scenario_type_value = self._value(scenario_type)
-        actions = RISK_ACTIONS.get(
-            requirement.risk_category_id,
-            [UserActionSpec(name="ask_out_of_scope", description="Ask boundary question.")],
-        )
+        actions = self._actions(requirement)
         action_names = [action.name for action in actions[:2]]
         scenario_id = semantic_id("scn", scenario_type_value, f"{task_spec.task_id}_{requirement.risk_category_id}_{index}")
         linked = requirement.linked_requirement_ids or [task_spec.requirements[0].id]
@@ -80,7 +41,7 @@ class RiskScenarioFactory:
                 knowledge_level="partially_aware",
                 speaking_style="questioning",
                 common_working_hours="workday_daytime",
-                working_location="on_the_road" if requirement.risk_category_id == "termination_safety" else "office",
+                working_location="unknown",
             ),
             user_prior_conditions=[
                 f"user will actively trigger risk category {requirement.risk_category_id}",
@@ -108,3 +69,15 @@ class RiskScenarioFactory:
 
     def _value(self, value: Any) -> str:
         return value.value if hasattr(value, "value") else str(value)
+
+    def _actions(self, requirement: RiskCoverageRequirement) -> list[UserActionSpec]:
+        if any(self._value(item) == ScenarioType.EXCEPTION.value for item in requirement.required_scenario_types):
+            return [
+                UserActionSpec(name="say_unavailable", description="User is unavailable to continue.", risk_category_id=requirement.risk_category_id),
+                UserActionSpec(name="end_call", description="End the call.", risk_category_id=requirement.risk_category_id),
+            ]
+        return [
+            UserActionSpec(name="ask_detail", description="Ask for exact details grounded in the task.", risk_category_id=requirement.risk_category_id),
+            UserActionSpec(name="challenge_constraint", description="Ask whether an unsupported exception can be made.", risk_category_id=requirement.risk_category_id),
+            UserActionSpec(name="ask_out_of_scope", description="Ask for unrelated or unsupported handling.", risk_category_id=requirement.risk_category_id),
+        ]

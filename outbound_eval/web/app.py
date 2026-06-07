@@ -16,9 +16,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from outbound_eval.adapters import OpenAICompatibleAdapter
 from outbound_eval.badcase import BadcaseLibrary
 from outbound_eval.compiler import InstructionCompileService
+from outbound_eval.compiler.compile_qa import CompileQAGate
 from outbound_eval.compiler.llm_task_compiler import LLMTaskCompiler
 from outbound_eval.config import settings
 from outbound_eval.domain.schemas_episode import EpisodeExecution, TurnEvent
+from outbound_eval.domain.ids import timestamped_id
 from outbound_eval.domain.schemas_model import ModelConfig
 from outbound_eval.domain.schemas_persona import EvaluatorPersonaInput
 from outbound_eval.domain.schemas_scenario import ScenarioSpec
@@ -30,7 +32,12 @@ from outbound_eval.domain.schemas_understanding import (
 )
 from outbound_eval.golden import GoldenSetService
 from outbound_eval.planner import CoveragePlanner
+from outbound_eval.planner.scenario_planner_llm import ScenarioPlannerLLM
 from outbound_eval.planner.scenario_builder_llm import ScenarioBuilderLLM
+from outbound_eval.planner.scenario_qa import ScenarioQAGate
+from outbound_eval.simulator.dialogue_manager import DialogueManager
+from outbound_eval.evaluator.evidence_mapper import EvidenceMapper
+from outbound_eval.evaluator.finding_aggregator import FindingAggregator
 from outbound_eval.reporting import ReportGenerator
 from outbound_eval.runner import BatchRunner
 from outbound_eval.scoring import ScoreAggregator
@@ -54,15 +61,16 @@ _run_locks: dict[str, asyncio.Lock] = {}
 
 # ---------- 请求/响应 schema ----------
 
-class ThreeModelConfigs(BaseModel):
-    """前端必须同时配置三个 LLM。"""
+class FourModelConfigs(BaseModel):
+    """前端必须同时配置四个 LLM 角色。"""
     compiler_model: ModelConfig
+    target_model: ModelConfig
     simulator_model: ModelConfig
     judge_model: ModelConfig
 
 
-class TestThreeModelsRequest(BaseModel):
-    configs: ThreeModelConfigs
+class TestAllModelsRequest(BaseModel):
+    configs: FourModelConfigs
 
 
 class CompileRequest(BaseModel):
@@ -86,6 +94,7 @@ class StartRunRequest(BaseModel):
     understanding: dict[str, Any]
     scenarios: list[dict[str, Any]]
     compiler_model: ModelConfig
+    target_model: ModelConfig
     simulator_model: ModelConfig
     judge_model: ModelConfig
     attempts: int = 1
@@ -143,18 +152,20 @@ async def health() -> dict:
 # ===== 新版 API =====
 
 @app.post("/api/models/test-all")
-async def test_all_models(request: TestThreeModelsRequest):
-    """同时测试三个 LLM 配置，全部通过才返回 ok=True。"""
+async def test_all_models(request: TestAllModelsRequest):
+    """同时测试四个 LLM 角色配置，全部通过才返回 ok=True。"""
     adapter = OpenAICompatibleAdapter()
     results = await asyncio.gather(
         adapter.test_connection(request.configs.compiler_model),
+        adapter.test_connection(request.configs.target_model),
         adapter.test_connection(request.configs.simulator_model),
         adapter.test_connection(request.configs.judge_model),
         return_exceptions=True,
     )
     compiler_r = results[0] if not isinstance(results[0], Exception) else None
-    simulator_r = results[1] if not isinstance(results[1], Exception) else None
-    judge_r = results[2] if not isinstance(results[2], Exception) else None
+    target_r = results[1] if not isinstance(results[1], Exception) else None
+    simulator_r = results[2] if not isinstance(results[2], Exception) else None
+    judge_r = results[3] if not isinstance(results[3], Exception) else None
 
     def _fmt(r, label):
         if r is None:
@@ -163,12 +174,13 @@ async def test_all_models(request: TestThreeModelsRequest):
 
     all_ok = all(
         (r is not None and r.ok)
-        for r in [compiler_r, simulator_r, judge_r]
+        for r in [compiler_r, target_r, simulator_r, judge_r]
     )
     return {
         "ok": all_ok,
         "details": [
             _fmt(compiler_r, "compiler"),
+            _fmt(target_r, "target"),
             _fmt(simulator_r, "simulator"),
             _fmt(judge_r, "judge"),
         ],
@@ -189,12 +201,18 @@ async def task_understand(request: LLMCompileRequest):
             raw_markdown=request.instruction,
             model_config=request.llm_config,
         )
+        compile_qa = CompileQAGate().validate(understanding)
         repo.upsert_json(
             "task_understandings",
             understanding.task_spec.get("task_id", "unknown"),
             understanding.model_dump(mode="json"),
         )
-        return {"ok": True, "understanding": understanding.model_dump(mode="json")}
+        return {
+            "ok": compile_qa.passed,
+            "understanding": understanding.model_dump(mode="json"),
+            "compile_qa": compile_qa.model_dump(mode="json"),
+            "error": None if compile_qa.passed else "CompileQAGate blocked this task understanding.",
+        }
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
 
@@ -204,15 +222,37 @@ async def build_scenarios(request: BuildScenariosRequest):
     """LLM 生成测试场景。"""
     try:
         understanding = TaskUnderstanding.model_validate(request.understanding)
+        compile_qa = CompileQAGate().validate(understanding)
+        if not compile_qa.passed:
+            return {
+                "ok": False,
+                "error": "CompileQAGate blocked scenario building.",
+                "compile_qa": compile_qa.model_dump(mode="json"),
+            }
         persona = EvaluatorPersonaInput.model_validate(request.persona) if request.persona else EvaluatorPersonaInput()
+        planner = ScenarioPlannerLLM()
+        plan = await planner.plan(
+            understanding=understanding,
+            persona=persona,
+            scenario_count=request.scenario_count,
+            model_config=request.llm_config,
+        )
         builder = ScenarioBuilderLLM()
         scenario_set = await builder.build(
             understanding=understanding,
             persona=persona,
             scenario_count=request.scenario_count,
             model_config=request.llm_config,
+            plan=plan,
         )
-        return {"ok": True, "scenario_set": scenario_set.model_dump(mode="json")}
+        scenario_qa = ScenarioQAGate().validate(understanding, scenario_set)
+        return {
+            "ok": scenario_qa.passed,
+            "scenario_plan": plan.model_dump(mode="json"),
+            "scenario_set": scenario_set.model_dump(mode="json"),
+            "scenario_qa": scenario_qa.model_dump(mode="json"),
+            "error": None if scenario_qa.passed else "ScenarioQAGate blocked this scenario set.",
+        }
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
 
@@ -230,196 +270,76 @@ async def run_start(request: StartRunRequest):
 
     async def _run():
         try:
-            await _push({"type": "stage", "stage": "compile_task", "message": "正在编译任务..."})
-
             understanding = TaskUnderstanding.model_validate(request.understanding)
-            scenarios_raw = request.scenarios
-            judge_plan = understanding.judge_plan
+            compile_qa = CompileQAGate().validate(understanding)
+            if not compile_qa.passed:
+                await _push({"type": "error", "error": "CompileQAGate blocked this run.", "compile_qa": compile_qa.model_dump(mode="json")})
+                return
 
-            await _push({"type": "stage", "stage": "build_complete", "message": f"场景数量: {len(scenarios_raw)}"})
+            scenarios = [LLMScenarioSpec.model_validate(item) for item in request.scenarios]
+            scenario_set = ScenarioSet(task_id=understanding.task_spec.get("task_id", "task_unknown"), scenarios=scenarios)
+            scenario_qa = ScenarioQAGate().validate(understanding, scenario_set)
+            if not scenario_qa.passed:
+                await _push({"type": "error", "error": "ScenarioQAGate blocked this run.", "scenario_qa": scenario_qa.model_dump(mode="json")})
+                return
 
-            from outbound_eval.domain.ids import timestamped_id
-            from outbound_eval.domain.enums import EpisodeStatus, TurnRole
-            from outbound_eval.domain.schemas_episode import TurnEvent as TE
-            from outbound_eval.llm.structured_client import StructuredLLMClient
+            await _push({"type": "stage", "stage": "run_ready", "message": f"场景数量: {len(scenarios)}"})
+
             from outbound_eval.evaluator.semantic_judge import SemanticJudge
-
-            structured_client = StructuredLLMClient()
 
             all_judge_results = []
             all_episodes = []
+            all_target_payloads: list[dict[str, Any]] = []
+            all_visibility_violations: list[str] = []
+            dialogue = DialogueManager()
+            judge = SemanticJudge()
+            evidence_mapper = EvidenceMapper()
 
-            for scn_idx, scn_raw in enumerate(scenarios_raw):
-                scn = LLMScenarioSpec.model_validate(scn_raw)
+            for scn_idx, scn in enumerate(scenarios):
                 episode_id = timestamped_id("ep")
-                task_id = understanding.task_spec.get("task_id", "task_unknown")
-
                 await _push({
                     "type": "episode_start",
                     "episode_id": episode_id,
                     "scenario_id": scn.scenario_id,
                     "scenario_title": scn.title,
                     "scn_index": scn_idx,
-                    "total": len(scenarios_raw),
+                    "total": len(scenarios),
                 })
 
-                turns: list[TE] = []
-
-                # Initial user utterance
-                user_content = scn.initial_user_utterance or "您好"
-                user_turn = TE(
-                    id=timestamped_id("turn"),
+                dialogue_result = await dialogue.run_episode(
                     run_id=run_id,
+                    understanding=understanding,
+                    scenario=scn,
+                    raw_instruction=request.instruction,
+                    target_model_config=request.target_model,
+                    simulator_model_config=request.simulator_model,
                     episode_id=episode_id,
-                    turn_index=0,
-                    role=TurnRole.USER,
-                    content=user_content,
                 )
-                turns.append(user_turn)
-                await _push({
-                    "type": "turn",
-                    "episode_id": episode_id,
-                    "turn_id": user_turn.id,
-                    "role": "user",
-                    "content": user_content,
-                    "turn_index": 0,
-                })
-
-                # System prompt for target
-                task_spec = understanding.task_spec
-                system_prompt = (
-                    f"你是{task_spec.get('role', '外呼客服')}。\n"
-                    f"任务目标：{task_spec.get('objective', '')}\n"
-                    f"开场白：{task_spec.get('opening_line', '')}\n\n"
-                    f"任务说明：\n{request.instruction}"
-                )
-
-                max_turns = min(scn.max_turns, 12)
-                should_continue = True
-
-                for turn_idx in range(1, max_turns * 2):
-                    if not should_continue:
-                        break
-
-                    # Target LLM reply
-                    target_messages = [{"role": "system", "content": system_prompt}]
-                    for t in turns:
-                        role_map = {"user": "user", "assistant": "assistant", "system": "system"}
-                        target_messages.append({
-                            "role": role_map.get(str(t.role), "user"),
-                            "content": t.content,
-                        })
-
-                    try:
-                        target_reply = await structured_client.invoke_text(
-                            model_config=request.simulator_model,  # target uses simulator model slot here (configurable)
-                            messages=target_messages,
-                            temperature=0.3,
-                        )
-                    except Exception as exc:
-                        target_reply = f"[模型调用失败: {exc}]"
-                        should_continue = False
-
-                    assistant_turn = TE(
-                        id=timestamped_id("turn"),
-                        run_id=run_id,
-                        episode_id=episode_id,
-                        turn_index=len(turns),
-                        role=TurnRole.ASSISTANT,
-                        content=target_reply,
-                    )
-                    turns.append(assistant_turn)
-                    await _push({
-                        "type": "turn",
-                        "episode_id": episode_id,
-                        "turn_id": assistant_turn.id,
-                        "role": "assistant",
-                        "content": target_reply,
-                        "turn_index": len(turns) - 1,
-                    })
-
-                    if not should_continue:
-                        break
-
-                    # User Simulator LLM
-                    from pydantic import BaseModel as _BM, ConfigDict as _CD, Field as _F
-                    class _SimOut(_BM):
-                        model_config = _CD(extra="allow")
-                        utterance: str = ""
-                        should_continue: bool = True
-                        state: str = "active"
-                        intent: str = ""
-
-                    sim_transcript = "\n".join(
-                        f"[{t.role}]: {t.content}" for t in turns
-                    )
-                    sim_messages = [
-                        {"role": "system", "content": (
-                            "你是模拟用户，正在进行电话沟通。\n"
-                            f"你的画像：{scn.persona.model_dump()}\n"
-                            f"你的目标：{scn.user_goal}\n"
-                            f"对话方向：{'; '.join(scn.dialogue_direction)}\n"
-                            "规则：\n"
-                            "- 每次输出一句自然话术，不超过30字\n"
-                            "- 不泄露测试目的\n"
-                            "- 当目标已达成或对话自然结束时，should_continue=false\n"
-                            "输出 JSON: {utterance, should_continue, state, intent}"
-                        )},
-                        {"role": "user", "content": f"当前对话:\n{sim_transcript}\n\n请输出下一句用户话术:"},
-                    ]
-
-                    try:
-                        sim_result = await structured_client.invoke_json(
-                            model_config=request.simulator_model,
-                            messages=sim_messages,
-                            output_model=_SimOut,
-                            stage="simulate_user",
-                            temperature=0.7,
-                        )
-                        sim_out = sim_result.parsed
-                        next_utterance = sim_out.utterance
-                        should_continue = sim_out.should_continue
-                    except Exception as exc:
-                        next_utterance = "好的，谢谢。"
-                        should_continue = False
-
-                    if not next_utterance.strip():
-                        should_continue = False
-                        break
-
-                    next_user_turn = TE(
-                        id=timestamped_id("turn"),
-                        run_id=run_id,
-                        episode_id=episode_id,
-                        turn_index=len(turns),
-                        role=TurnRole.USER,
-                        content=next_utterance,
-                    )
-                    turns.append(next_user_turn)
-                    await _push({
-                        "type": "turn",
-                        "episode_id": episode_id,
-                        "turn_id": next_user_turn.id,
-                        "role": "user",
-                        "content": next_utterance,
-                        "turn_index": len(turns) - 1,
-                    })
-
-                episode = EpisodeExecution(
-                    run_id=run_id,
-                    episode_id=episode_id,
-                    task_id=task_id,
-                    scenario_id=scn.scenario_id,
-                    turns=turns,
-                    status=EpisodeStatus.COMPLETED,
-                )
+                episode = dialogue_result.episode
+                all_target_payloads.extend(dialogue_result.target_payloads)
+                all_visibility_violations.extend(dialogue_result.visibility_violations)
                 all_episodes.append(episode)
 
-                await _push({"type": "episode_end", "episode_id": episode_id, "turns_count": len(turns)})
+                await _push({
+                    "type": "episode_bound",
+                    "episode_id": episode.episode_id,
+                    "scenario_id": scn.scenario_id,
+                    "status": str(episode.status),
+                    "termination_reason": episode.termination_reason,
+                })
+                for turn in episode.turns:
+                    await _push({
+                        "type": "turn",
+                        "episode_id": episode.episode_id,
+                        "turn_id": turn.id,
+                        "role": str(turn.role),
+                        "content": turn.content,
+                        "turn_index": turn.turn_index,
+                    })
+                await _push({"type": "episode_end", "episode_id": episode.episode_id, "turns_count": len(episode.turns)})
 
                 # Semantic Judge
-                await _push({"type": "stage", "stage": "judging", "episode_id": episode_id, "message": "正在评分..."})
-                judge = SemanticJudge(client=structured_client)
+                await _push({"type": "stage", "stage": "judging", "episode_id": episode.episode_id, "message": "正在评分..."})
                 try:
                     judge_result = await judge.evaluate_understanding(
                         understanding=understanding,
@@ -427,10 +347,11 @@ async def run_start(request: StartRunRequest):
                         episode=episode,
                         model_config=request.judge_model,
                     )
+                    judge_result = evidence_mapper.map_semantic_result(episode, judge_result)
                     all_judge_results.append(judge_result)
                     await _push({
                         "type": "judge_result",
-                        "episode_id": episode_id,
+                        "episode_id": episode.episode_id,
                         "scenario_id": scn.scenario_id,
                         "total_score": judge_result.total_score,
                         "overall_summary": judge_result.overall_summary,
@@ -438,26 +359,34 @@ async def run_start(request: StartRunRequest):
                         "critical_failures": judge_result.critical_failures,
                     })
                 except Exception as exc:
-                    await _push({"type": "judge_error", "episode_id": episode_id, "error": str(exc)})
+                    await _push({"type": "judge_error", "episode_id": episode.episode_id, "error": str(exc)})
 
             # Final report
             avg_score = (
                 sum(r.total_score for r in all_judge_results) / len(all_judge_results)
                 if all_judge_results else 0.0
             )
+            aggregated_findings = FindingAggregator().merge(semantic_results=all_judge_results)
             report_payload = {
                 "run_id": run_id,
                 "task_name": understanding.task_spec.get("task_name", ""),
                 "instruction": request.instruction,
-                "total_scenarios": len(scenarios_raw),
+                "total_scenarios": len(scenarios),
                 "avg_score": round(avg_score, 1),
                 "judge_results": [r.model_dump() for r in all_judge_results],
                 "judge_plan": understanding.judge_plan.model_dump(mode="json"),
+                "scenario_qa": scenario_qa.model_dump(mode="json"),
                 "knowledge_facts": [kf.model_dump() for kf in understanding.knowledge_facts],
+                "source_map": {key: value.model_dump(mode="json") for key, value in understanding.source_map.items()},
+                "target_payloads": all_target_payloads,
+                "visibility_violations": all_visibility_violations,
+                "findings": [finding.model_dump(mode="json") for finding in aggregated_findings],
                 "episodes": [
                     {
                         "episode_id": ep.episode_id,
                         "scenario_id": ep.scenario_id,
+                        "status": str(ep.status),
+                        "termination_reason": ep.termination_reason,
                         "turns": [
                             {"id": t.id, "role": str(t.role), "content": t.content}
                             for t in ep.turns
@@ -678,10 +607,10 @@ async def export_run(run_id: str):
 
 @app.post("/api/compile")
 async def compile_task(request: CompileRequest):
-    result = InstructionCompileService().compile(request.instruction)
-    if result.task_spec:
-        repo.upsert_json("task_specs", result.task_spec.task_id, result.task_spec.model_dump(mode="json"))
-    return result
+    raise HTTPException(
+        status_code=410,
+        detail="Legacy /api/compile was removed from the default product path. Use /api/task/understand.",
+    )
 
 
 @app.post("/api/qa")
@@ -692,59 +621,18 @@ async def qa_task(request: QARequest):
 
 @app.post("/api/plan")
 async def plan_task(request: PlanRequest):
-    task_spec = TaskSpec.model_validate(request.task_spec)
-    matrix = CoveragePlanner().plan(task_spec, budget=request.budget)
-    for scenario in matrix.scenarios:
-        repo.upsert_json("scenario_definitions", scenario.scenario_id, scenario.model_dump(mode="json"))
-    return matrix
+    raise HTTPException(
+        status_code=410,
+        detail="Legacy /api/plan was removed from the default product path. Use /api/scenarios/build.",
+    )
 
 
 @app.post("/api/run")
 async def run_eval(request: RunRequest):
-    connection = await OpenAICompatibleAdapter().test_connection(request.target_model_config)
-    if not connection.ok:
-        return {"ok": False, "stage": "connection_test", "connection": connection}
-    model_config = request.target_model_config.model_copy(update={"connection_tested": True})
-    compile_result = InstructionCompileService().compile(request.instruction)
-    if not compile_result.task_spec:
-        return {"ok": False, "stage": "compile", "compile_result": compile_result}
-    task_spec = compile_result.task_spec
-    qa = await SpecQAService().audit(request.instruction, task_spec)
-    if not qa.passed:
-        return {"ok": False, "stage": "qa", "qa": qa}
-    coverage = CoveragePlanner().plan(task_spec, request.budget)
-    if isinstance(repo, PostgresRepository):
-        repo.init_db()
-    runner = BatchRunner()
-    runner.episode_runner.trace_store = PostgresTraceStore(settings().pg_dsn)
-    out = Path("runs") / "web_latest"
-    runner.episode_runner.audit_payload_dir = out
-    runner.episode_runner.simulator_model_config = model_config
-    run_result = await runner.run_matrix(task_spec, coverage.scenarios, [model_config], request.attempts, request.parallel)
-    episodes = [item.episode for item in run_result.episode_results]
-    judges = [judge for item in run_result.episode_results for judge in item.judges]
-    score = ScoreAggregator().aggregate(task_spec, judges, run_id=run_result.run_id)
-    report = ReportGenerator().build(task_spec, coverage, episodes, judges, score, model_config.redacted())
-    paths = ReportGenerator().write(report, out)
-    repo.upsert_json("evaluation_runs", run_result.run_id, run_result.model_dump(mode="json"))
-    repo.upsert_json("report_artifacts", run_result.run_id, report.model_dump(mode="json"))
-    badcases = []
-    scenario_by_id = {scenario.scenario_id: scenario for scenario in coverage.scenarios}
-    for result in run_result.episode_results:
-        badcases.extend(BadcaseLibrary().from_judges(task_spec, scenario_by_id[result.episode.scenario_id], result.judges))
-    for item in badcases:
-        repo.upsert_json("badcase_items", item.id, item.model_dump(mode="json"))
-    redis_state.set_run_status(run_result.run_id, {"stage": "completed", "status": "completed", "score": score.normalized_score})
-    return {
-        "ok": True,
-        "run_id": run_result.run_id,
-        "score": score.normalized_score,
-        "report_html": str(paths["html"]),
-        "report_url": f"/api/report/{run_result.run_id}/html",
-        "coverage": coverage,
-        "episodes": len(episodes),
-        "judges": len(judges),
-    }
+    raise HTTPException(
+        status_code=410,
+        detail="Legacy /api/run was removed from the default product path. Use /api/run/start with TaskUnderstanding and ScenarioSet.",
+    )
 
 
 @app.post("/api/rejudge")

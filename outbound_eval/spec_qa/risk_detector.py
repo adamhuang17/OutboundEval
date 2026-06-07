@@ -34,7 +34,7 @@ class RiskDetector:
                 spans.append(f"{source.kind}:{source.id}:{source.text[:120]}")
                 if source.kind == "requirement":
                     req_ids.add(source.id)
-                elif source.kind == "faq":
+                elif source.kind in {"faq", "knowledge"}:
                     faq_ids.add(source.id)
                 elif source.kind == "constraint":
                     constraint_ids.add(source.id)
@@ -57,6 +57,10 @@ class RiskDetector:
             RiskSource("faq", fact.id, "\n".join([fact.question, fact.answer, fact.grounding_source]))
             for fact in task_spec.faq_facts
         )
+        corpus.extend(
+            RiskSource("knowledge", fact.id, "\n".join([fact.text, fact.answer or "", fact.source_text]))
+            for fact in task_spec.knowledge_facts
+        )
         corpus.extend(RiskSource("constraint", item.id, item.rule_text) for item in task_spec.constraints)
         corpus.extend(
             RiskSource("forbidden", item.id, "\n".join([item.name, item.description, item.source_text]))
@@ -67,4 +71,3 @@ class RiskDetector:
             for item in task_spec.termination_rules
         )
         return corpus
-

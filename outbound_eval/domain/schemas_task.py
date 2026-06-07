@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from outbound_eval.domain.enums import CheckMethod, RequirementCategory, RiskGuardType, ScenarioType, Severity
+from outbound_eval.domain.schemas_markdown import SourceRef
 
 
 class DomainModel(BaseModel):
@@ -81,6 +82,32 @@ class FAQFact(DomainModel):
     def grounding_required(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("FAQFact.grounding_source is required")
+        return value
+
+
+class KnowledgeFact(DomainModel):
+    id: str
+    text: str
+    fact_type: Literal[
+        "faq",
+        "policy",
+        "business_rule",
+        "procedure",
+        "definition",
+        "constraint_detail",
+        "other",
+    ] = "other"
+    source_node_id: str = ""
+    source_text: str = ""
+    requirement_ids: list[str] = Field(default_factory=list)
+    question_patterns: list[str] = Field(default_factory=list)
+    answer: str | None = None
+
+    @field_validator("text")
+    @classmethod
+    def text_required(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("KnowledgeFact.text is required")
         return value
 
 
@@ -213,6 +240,7 @@ class TaskSpec(DomainModel):
     flow_nodes: list[FlowNode] = Field(default_factory=list)
     flow_edges: list[FlowEdge] = Field(default_factory=list)
     branch_rules: list[BranchRule] = Field(default_factory=list)
+    knowledge_facts: list[KnowledgeFact] = Field(default_factory=list)
     faq_facts: list[FAQFact] = Field(default_factory=list)
     constraints: list[ConstraintRule] = Field(default_factory=list)
     forbidden_behaviors: list[ForbiddenBehavior] = Field(default_factory=list)
@@ -224,6 +252,7 @@ class TaskSpec(DomainModel):
     risk_coverage_requirements: list[RiskCoverageRequirement] = Field(default_factory=list)
     severity_caps: list[SeverityCap] = Field(default_factory=list)
     source_sections: dict[str, str] = Field(default_factory=dict)
+    source_map: dict[str, SourceRef] = Field(default_factory=dict)
     source_text: str = ""
     metadata: dict[str, Any] = Field(default_factory=dict)
     compiled_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -253,6 +282,10 @@ class TaskSpec(DomainModel):
             missing_links = [rid for rid in item.linked_requirement_ids if rid not in req_id_set]
             if missing_links:
                 raise ValueError(f"{item.rubric_id} links unknown requirements: {missing_links}")
+        for fact in self.knowledge_facts:
+            unknown = [rid for rid in fact.requirement_ids if rid not in req_id_set]
+            if unknown:
+                raise ValueError(f"{fact.id} links unknown requirements: {unknown}")
         for node in self.flow_nodes:
             unknown = [rid for rid in node.requirement_ids if rid not in req_id_set]
             if unknown:

@@ -6,32 +6,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from outbound_eval.domain.enums import Severity
 from outbound_eval.domain.schemas_markdown import SourceRef
+from outbound_eval.domain.schemas_task import KnowledgeFact
 
 
 class UndModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
-
-class KnowledgeFact(UndModel):
-    """通用知识点，替代只支持 Q/A 的 FAQFact，可表达 policy/procedure/definition 等。"""
-
-    id: str
-    text: str
-    fact_type: Literal[
-        "faq",
-        "policy",
-        "business_rule",
-        "procedure",
-        "definition",
-        "constraint_detail",
-        "other",
-    ] = "faq"
-    source_node_id: str = ""
-    source_text: str = ""
-    requirement_ids: list[str] = Field(default_factory=list)
-    # 兼容老 Q/A 格式
-    question_patterns: list[str] = Field(default_factory=list)
-    answer: str | None = None
 
 
 class JudgeDimension(str):

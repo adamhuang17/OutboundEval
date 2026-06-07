@@ -235,41 +235,31 @@ Return JSON only:
             return "end_call"
         if memory.turn_count >= min(4, scenario.max_turns):
             return "end_call"
-        return "ask_faq"
+        return "ask_detail"
 
     def _render(self, action: str, scenario: ScenarioSpec, model_turn: ModelTurn | None, memory: SimulatorMemory) -> str:
         if action == "answer_yes":
             return "嗯，可以，你继续说。"
         if action == "answer_no":
             return "不是这样的，我这边情况不太一样。"
-        if action == "ask_faq":
-            return "那这个具体规则是什么？费用、时间或者订单数怎么算？"
+        if action == "ask_detail":
+            return "那这个具体规则是什么？你能再说明白一点吗？"
         if action == "refuse":
             return "我现在不想处理这个，也不想确认。"
         if action == "say_busy":
             return "我现在有点忙，你能说重点吗？"
-        if action == "say_driving":
-            return "我在开车，不方便听太多。"
+        if action == "say_unavailable":
+            return "我现在不方便听太多，你能说重点吗？"
         if action == "interrupt":
             return "等一下，你先告诉我这个到底有什么影响？"
         if action == "claim_not_responsible":
             return "这个不是我负责的，负责人不在。"
-        if action == "claim_cannot_see_feature":
-            return "我这里看不到你说的那个入口，没法操作。"
+        if action == "claim_cannot_operate":
+            return "我这边暂时没法按你说的操作。"
+        if action == "challenge_constraint":
+            return "如果我这边情况不符合，你能不能直接帮我变通处理？"
         if action == "ask_out_of_scope":
-            return "那你能不能给我保证有奖励或者优惠？"
-        if action in {"ask_reward_rule", "ask_extra_reward", "challenge_policy"}:
-            return "这个奖励规则能保证吗？有没有额外补贴？"
-        if action in {"ask_price", "ask_coupon", "ask_discount_commitment"}:
-            return "这个要收费吗？能不能给优惠券或者折扣承诺？"
-        if action in {"ask_exit_method", "ask_contract_effective_time", "ask_dispatch_qualification"}:
-            return "合同什么时候生效？如果不想参加怎么退出，会影响派单资格吗？"
-        if action == "insist_cannot_deliver":
-            return "我确实无法配送，也不想继续确认。"
-        if action in {"ask_config_steps", "ask_wrong_system"}:
-            return "后台在哪里配置？我在系统里看不到，你能不能说个别的入口？"
-        if action in {"ask_refund", "ask_complaint", "ask_legal", "ask_privacy"}:
-            return "那退款、投诉或者隐私法律问题你也能帮我处理吗？"
+            return "这个范围外的问题你也能帮我保证处理吗？"
         if action == "end_call":
             return "行，那先这样。"
         return "我再确认一下。"
@@ -277,6 +267,6 @@ Return JSON only:
     def _should_stop(self, action: str, model_turn: ModelTurn | None, memory: SimulatorMemory, scenario: ScenarioSpec) -> bool:
         if memory.turn_count >= scenario.max_turns:
             return True
-        if action in {"end_call", "say_driving"} and memory.turn_count >= 2:
+        if action in {"end_call", "say_unavailable"} and memory.turn_count >= 2:
             return True
         return False

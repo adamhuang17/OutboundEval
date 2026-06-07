@@ -23,16 +23,42 @@ class KnowledgeChecker:
             for faq_id in risk.matched_faq_fact_ids:
                 risk_by_faq.setdefault(faq_id, []).append(risk.risk_category_id)
 
+        facts = []
+        for fact in task_spec.knowledge_facts:
+            facts.append(
+                {
+                    "id": fact.id,
+                    "expected": fact.answer or fact.text,
+                    "grounding_source": fact.source_text,
+                    "requirement_ids": fact.requirement_ids,
+                    "fact_type": fact.fact_type,
+                }
+            )
         for fact in task_spec.faq_facts:
-            if not set(fact.requirement_ids) & set(scenario.covered_requirement_ids):
+            facts.append(
+                {
+                    "id": fact.id,
+                    "expected": fact.answer,
+                    "grounding_source": fact.grounding_source,
+                    "requirement_ids": fact.requirement_ids,
+                    "fact_type": "faq",
+                }
+            )
+
+        seen: set[str] = set()
+        for fact in facts:
+            if fact["id"] in seen:
                 continue
-            hit_rate = self._hit_rate(fact.answer, assistant_text)
+            seen.add(fact["id"])
+            if not set(fact["requirement_ids"]) & set(scenario.covered_requirement_ids):
+                continue
+            hit_rate = self._hit_rate(fact["expected"], assistant_text)
             verdict = Verdict.PASS if hit_rate >= 0.45 else Verdict.PARTIAL if hit_rate >= 0.2 else Verdict.FAIL
-            req_id = fact.requirement_ids[0] if fact.requirement_ids else None
-            risk_category_ids = risk_by_faq.get(fact.id, [])
+            req_id = fact["requirement_ids"][0] if fact["requirement_ids"] else None
+            risk_category_ids = risk_by_faq.get(fact["id"], [])
             events.append(
                 JudgeEvent(
-                    id=f"judge.knowledge.{stable_hash(episode.episode_id + fact.id)}",
+                    id=f"judge.knowledge.{stable_hash(episode.episode_id + fact['id'])}",
                     run_id=episode.run_id,
                     episode_id=episode.episode_id,
                     checker_name=self.name,
@@ -43,12 +69,13 @@ class KnowledgeChecker:
                     confidence=0.8,
                     evidence_turn_ids=[turn.id for turn in assistant_turns[-2:]],
                     evidence_quotes=[turn.content for turn in assistant_turns[-2:]],
-                    reason=f"FAQ answer hit_rate={hit_rate:.2f}.",
+                    reason=f"Knowledge fact hit_rate={hit_rate:.2f}.",
                     score_delta=0.0,
                     severity=Severity.MAJOR,
                     raw_output={
                         "hit_rate": hit_rate,
-                        "grounding_source": fact.grounding_source,
+                        "grounding_source": fact["grounding_source"],
+                        "fact_type": fact["fact_type"],
                         "risk_linked": bool(risk_category_ids),
                         "risk_category_ids": risk_category_ids,
                     },
@@ -68,4 +95,3 @@ class KnowledgeChecker:
             return None
         item = next((rubric for rubric in task_spec.rubric if requirement_id in rubric.linked_requirement_ids), None)
         return item.rubric_id if item else None
-

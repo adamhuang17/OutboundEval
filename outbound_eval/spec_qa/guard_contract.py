@@ -40,6 +40,9 @@ class GuardContractEvaluator:
             for fact in task_spec.faq_facts:
                 if fact.id in faq_hits:
                     linked_req_ids.update(fact.requirement_ids)
+            for fact in task_spec.knowledge_facts:
+                if fact.id in faq_hits:
+                    linked_req_ids.update(fact.requirement_ids)
 
         for req in task_spec.requirements:
             if req.id in detected_risk.matched_requirement_ids:
@@ -142,6 +145,10 @@ class GuardContractEvaluator:
         for fact in task_spec.faq_facts:
             text = "\n".join([fact.question, fact.answer, fact.grounding_source])
             if self._text_hits(text, category) and fact.grounding_source.strip():
+                hits.add(fact.id)
+        for fact in task_spec.knowledge_facts:
+            text = "\n".join([fact.text, fact.answer or "", fact.source_text])
+            if self._text_hits(text, category) and fact.source_text.strip():
                 hits.add(fact.id)
         return hits
 

@@ -51,6 +51,7 @@ def build_parser() -> argparse.ArgumentParser:
     compile_cmd = sub.add_parser("compile")
     compile_cmd.add_argument("--input", required=True)
     compile_cmd.add_argument("--out", default="runs/compiled")
+    add_model_args(compile_cmd)
     compile_cmd.set_defaults(func=cmd_compile)
 
     qa_cmd = sub.add_parser("qa")
@@ -145,7 +146,7 @@ def cmd_model_test(args: argparse.Namespace) -> int:
 
 def cmd_compile(args: argparse.Namespace) -> int:
     raw = Path(args.input).read_text(encoding="utf-8")
-    result = InstructionCompileService().compile(raw)
+    result = InstructionCompileService().compile(raw, model_config=model_config_from_args(args))
     InstructionCompileService().write_outputs(result, Path(args.out))
     print(f"compile status={result.status} out={args.out}")
     if result.compile_error:
@@ -197,7 +198,7 @@ async def _run(args: argparse.Namespace) -> int:
         print(connection.get("error_message"))
         return 2
     config = model_config_from_args(args, tested=True)
-    compile_result = InstructionCompileService().compile(raw)
+    compile_result = InstructionCompileService().compile(raw, model_config=config)
     InstructionCompileService().write_outputs(compile_result, out)
     if not compile_result.task_spec:
         print(f"compile failed: {compile_result.compile_error.message if compile_result.compile_error else 'unknown'}")

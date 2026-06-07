@@ -179,8 +179,8 @@ textarea:focus { outline: none; border-color: var(--accent); }
   font: 12.5px/1.6 Consolas, "Courier New", monospace;
 }
 
-/* ===== 配置页 - 三模型卡 ===== */
-.model-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+/* ===== 配置页 - 四模型卡 ===== */
+.model-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
 .model-card {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -199,6 +199,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
   letter-spacing: 0.3px;
 }
 .model-role-badge.compiler { background: #dbeafe; color: #1d4ed8; }
+.model-role-badge.target { background: #dcfce7; color: #166534; }
 .model-role-badge.simulator { background: #fce7f3; color: #9d174d; }
 .model-role-badge.judge { background: #fef3c7; color: #92400e; }
 .model-status { font-size: 12px; color: var(--muted); }
@@ -443,5 +444,3 @@ textarea:focus { outline: none; border-color: var(--accent); }
   .chat-workspace { grid-template-columns: 1fr; }
   .chat-sidebar { display: none; }
 }
-
-

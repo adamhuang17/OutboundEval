@@ -42,6 +42,14 @@ class TaskSpecValidator:
         for fact in spec.faq_facts:
             if not fact.grounding_source.strip():
                 issues.append(ValidationIssue(level="ERROR", path=fact.id, message="FAQFact lacks grounding_source"))
+        for fact in spec.knowledge_facts:
+            if not fact.source_text.strip():
+                issues.append(ValidationIssue(level="ERROR", path=fact.id, message="KnowledgeFact lacks source_text"))
+            for req_id in fact.requirement_ids:
+                if req_id not in req_ids:
+                    issues.append(ValidationIssue(level="ERROR", path=fact.id, message=f"unknown requirement {req_id}"))
+            if fact.source_node_id and fact.source_node_id not in spec.source_map:
+                issues.append(ValidationIssue(level="ERROR", path=fact.id, message=f"unknown source node {fact.source_node_id}"))
         for node in spec.flow_nodes:
             if not node.requirement_ids and not spec.branch_rules:
                 issues.append(ValidationIssue(level="WARNING", path=node.id, message="flow node has no requirement or branch"))
@@ -57,4 +65,3 @@ class TaskSpecValidator:
             "info": sum(1 for item in issues if item.level == "INFO"),
         }
         return ValidationReport(valid=summary["errors"] == 0, issues=issues, summary=summary)
-

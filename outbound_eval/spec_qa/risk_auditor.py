@@ -76,6 +76,9 @@ class RiskAuditor:
         for fact in task_spec.faq_facts:
             if fact.id in risk.matched_faq_fact_ids:
                 linked.update(fact.requirement_ids)
+        for fact in task_spec.knowledge_facts:
+            if fact.id in risk.matched_faq_fact_ids:
+                linked.update(fact.requirement_ids)
         for constraint in task_spec.constraints:
             if constraint.id in risk.matched_constraint_ids and constraint.requirement_id:
                 linked.add(constraint.requirement_id)

@@ -15,10 +15,9 @@ CHINESE_VARIABLE_HINTS = {
     "金额": "money",
     "费用": "money",
     "时间": "time",
-    "订单数": "order_count",
+    "数量": "count",
+    "次数": "count",
     "天数": "days",
-    "奖励": "reward",
-    "优惠券": "coupon",
 }
 
 
@@ -39,4 +38,3 @@ def extract_variables(text: str) -> list[TaskVariable]:
             name="positive_amount", kind="money", examples=["+$"], source_text="+$"
         )
     return sorted(seen.values(), key=lambda item: item.name)
-

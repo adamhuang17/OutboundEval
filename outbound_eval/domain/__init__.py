@@ -6,7 +6,7 @@ from outbound_eval.domain.schemas_model import ConnectionTestResult, ModelConfig
 from outbound_eval.domain.schemas_report import BadcaseItem, GoldenCase, GoldenLabel, ReportArtifact
 from outbound_eval.domain.schemas_scenario import PersonaSpec, ScenarioSpec
 from outbound_eval.domain.schemas_score import ScoreItem, ScoreSummary
-from outbound_eval.domain.schemas_task import RequirementItem, RubricItem, TaskSpec
+from outbound_eval.domain.schemas_task import KnowledgeFact, RequirementItem, RubricItem, TaskSpec
 
 __all__ = [
     "BadcaseItem",
@@ -15,6 +15,7 @@ __all__ = [
     "GoldenCase",
     "GoldenLabel",
     "JudgeEvent",
+    "KnowledgeFact",
     "ModelConfig",
     "ModelTurn",
     "PersonaSpec",
@@ -28,4 +29,3 @@ __all__ = [
     "TaskSpec",
     "TurnEvent",
 ]
-

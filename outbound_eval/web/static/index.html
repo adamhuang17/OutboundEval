@@ -28,10 +28,10 @@
     <section id="setup" class="panel active">
       <div class="page-header">
         <h1>LLM 配置 &amp; 评测员画像</h1>
-        <p class="sub">必须配置三个 LLM 并全部连接成功，才能进行评测</p>
+        <p class="sub">必须配置四个 LLM 角色并全部连接成功，才能进行评测</p>
       </div>
 
-      <!-- 三模型配置卡 -->
+      <!-- 四模型配置卡 -->
       <div class="model-grid">
         <!-- 编译模型 -->
         <div class="model-card" id="cardCompiler">
@@ -53,13 +53,33 @@
           <button class="test-btn" onclick="testSingleModel('compiler')">测试连接</button>
         </div>
 
+        <!-- 被测模型 -->
+        <div class="model-card" id="cardTarget">
+          <div class="model-card-header">
+            <span class="model-role-badge target">被测模型</span>
+            <span class="model-status" id="statusTarget">未测试</span>
+          </div>
+          <p class="model-desc">真实执行外呼任务，只能看到任务说明、变量和可见对话</p>
+          <div class="model-fields">
+            <label>Base URL<input id="targetUrl" value="https://dashscope.aliyuncs.com/compatible-mode/v1" placeholder="https://..."></label>
+            <label>Model<input id="targetModel" value="qwen-turbo" placeholder="gpt-4o / qwen-turbo"></label>
+            <label>API Key<input id="targetKey" type="password" placeholder="sk-..."></label>
+            <div class="model-row">
+              <label class="inline">Temperature<input id="targetTemp" type="number" step="0.1" min="0" max="2" value="0.3"></label>
+              <label class="inline">Max Tokens<input id="targetMaxTokens" type="number" value="512"></label>
+              <label class="inline">Timeout(s)<input id="targetTimeout" type="number" value="30"></label>
+            </div>
+          </div>
+          <button class="test-btn" onclick="testSingleModel('target')">测试连接</button>
+        </div>
+
         <!-- 模拟模型 -->
         <div class="model-card" id="cardSimulator">
           <div class="model-card-header">
             <span class="model-role-badge simulator">模拟模型</span>
             <span class="model-status" id="statusSimulator">未测试</span>
           </div>
-          <p class="model-desc">驱动用户模拟器（模拟用户角色）和被测对话模型</p>
+          <p class="model-desc">驱动用户模拟器，能看到场景、画像和隐藏用户目标</p>
           <div class="model-fields">
             <label>Base URL<input id="simulatorUrl" value="https://dashscope.aliyuncs.com/compatible-mode/v1" placeholder="https://..."></label>
             <label>Model<input id="simulatorModel" value="qwen-turbo" placeholder="gpt-4o / qwen-turbo"></label>
@@ -105,10 +125,10 @@
         <p class="sub">描述模拟用户的身份和特征，越详细场景越贴近真实测试目的</p>
         <div class="persona-grid">
           <label>身份描述
-            <input id="pIdentity" placeholder="如：大学生兼职骑手 / 中年男性装修工人">
+            <input id="pIdentity" placeholder="如：新用户 / 老客户 / 门店负责人">
           </label>
           <label>与任务的关系
-            <input id="pRelationship" placeholder="如：刚签约准备接单 / 已合作3年老用户">
+            <input id="pRelationship" placeholder="如：首次接触 / 已合作3年 / 临时负责人">
           </label>
           <label>参与动机
             <input id="pMotivation" placeholder="如：好奇奖励政策 / 担心合同条款">

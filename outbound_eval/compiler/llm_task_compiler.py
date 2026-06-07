@@ -1,7 +1,4 @@
-"""LLMTaskCompiler — 用 LLM 把任意 Markdown 任务说明编译成 TaskUnderstanding。
-
-替代 RuleBasedSpecExtractor 的主路径。
-"""
+"""LLMTaskCompiler — 用 LLM 把任意 Markdown 任务说明编译成 TaskUnderstanding。"""
 from __future__ import annotations
 
 import uuid
@@ -11,7 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from outbound_eval.compiler.markdown_ast import MarkdownAstParser
 from outbound_eval.compiler.task_compiler_prompts import build_compiler_messages
-from outbound_eval.domain.schemas_markdown import MarkdownAst, SourceRef
+from outbound_eval.compiler.compile_qa import CompileQAGate
+from outbound_eval.domain.schemas_markdown import MarkdownAst, MarkdownNode, SourceRef
 from outbound_eval.domain.schemas_model import ModelConfig
 from outbound_eval.domain.schemas_understanding import (
     CompileFinding,
@@ -64,20 +62,69 @@ def _to_severity(value: str) -> str:
     return mapping.get(str(value).lower(), "major")
 
 
-def _draft_to_task_spec(draft: _LLMCompilerDraft, task_id: str) -> dict[str, Any]:
+def _node_quote(node: MarkdownNode | None, fallback: str = "") -> str:
+    if node is None:
+        return fallback.strip()
+    quote = node.raw_text or node.body or fallback
+    return quote.strip()
+
+
+def _node_source_ref(node: MarkdownNode) -> SourceRef:
+    return SourceRef(
+        source_node_id=node.id,
+        heading_path=node.path,
+        start_line=node.start_line,
+        end_line=node.end_line,
+        quote=_node_quote(node),
+    )
+
+
+def _build_source_map(ast: MarkdownAst) -> dict[str, SourceRef]:
+    parser = MarkdownAstParser()
+    nodes = parser.flatten(ast)
+    if not nodes and ast.root:
+        nodes = [ast.root]
+    return {node.id: _node_source_ref(node) for node in nodes}
+
+
+def _source_ref_for(source_map: dict[str, SourceRef], source_node_id: str, fallback: str = "") -> SourceRef:
+    if source_node_id and source_node_id in source_map:
+        return source_map[source_node_id]
+    return SourceRef(
+        source_node_id=source_node_id or "node_root",
+        heading_path=[],
+        start_line=0,
+        end_line=0,
+        quote=fallback.strip(),
+    )
+
+
+def _source_text_for(source_map: dict[str, SourceRef], source_node_id: str, fallback: str = "") -> str:
+    return _source_ref_for(source_map, source_node_id, fallback).quote or fallback.strip()
+
+
+def _draft_to_task_spec(
+    draft: _LLMCompilerDraft,
+    task_id: str,
+    *,
+    source_map: dict[str, SourceRef],
+    raw_markdown: str,
+) -> dict[str, Any]:
     """把 LLM draft 转成 TaskSpec-compatible dict。"""
     seq: dict[str, int] = {}
 
     requirements = []
     for r in draft.requirements:
         rid = _normalize_id(r.get("id", ""), "req.", seq)
+        source_node_id = r.get("source_node_id", "")
+        source_text = r.get("source_text", "") or _source_text_for(source_map, source_node_id, r.get("name", ""))
         requirements.append(
             {
                 "id": rid,
                 "name": r.get("name", "未命名需求"),
                 "category": r.get("category", "task"),
-                "source_section": r.get("source_node_id", ""),
-                "source_text": r.get("source_text", ""),
+                "source_section": source_node_id,
+                "source_text": source_text,
                 "check_method": r.get("check_method", "llm"),
                 "severity": _to_severity(r.get("severity", "major")),
                 "tags": r.get("tags", []),
@@ -98,28 +145,49 @@ def _draft_to_task_spec(draft: _LLMCompilerDraft, task_id: str) -> dict[str, Any
 
     branch_rules = []
     for b in draft.branch_rules:
+        source_node_id = b.get("source_node_id", "")
         branch_rules.append(
             {
                 "id": _normalize_id(b.get("id", ""), "branch.", seq),
                 "name": b.get("name", ""),
                 "condition": b.get("condition", ""),
-                "source_text": b.get("source_text", ""),
+                "source_text": b.get("source_text", "") or _source_text_for(source_map, source_node_id, b.get("condition", "")),
+            }
+        )
+
+    knowledge_facts = []
+    for kf in draft.knowledge_facts:
+        source_node_id = kf.get("source_node_id", "")
+        text = kf.get("text", "")
+        source_text = kf.get("source_text", "") or _source_text_for(source_map, source_node_id, text)
+        knowledge_facts.append(
+            {
+                "id": _normalize_id(kf.get("id", ""), "kf.", seq),
+                "text": text or source_text[:200],
+                "fact_type": kf.get("fact_type", "other"),
+                "source_node_id": source_node_id,
+                "source_text": source_text,
+                "requirement_ids": kf.get("requirement_ids", []),
+                "question_patterns": kf.get("question_patterns", []),
+                "answer": kf.get("answer"),
             }
         )
 
     constraints = []
     for c in draft.constraints:
+        source_node_id = c.get("source_node_id", "")
         constraints.append(
             {
                 "id": _normalize_id(c.get("id", ""), "con.", seq),
                 "name": c.get("name", ""),
-                "rule_text": c.get("rule_text", ""),
+                "rule_text": c.get("rule_text", "") or _source_text_for(source_map, source_node_id, c.get("name", "")),
                 "severity": _to_severity(c.get("severity", "major")),
             }
         )
 
     forbidden_behaviors = []
     for fb in draft.forbidden_behaviors:
+        source_node_id = fb.get("source_node_id", "")
         forbidden_behaviors.append(
             {
                 "id": _normalize_id(fb.get("id", ""), "fb.", seq),
@@ -127,18 +195,19 @@ def _draft_to_task_spec(draft: _LLMCompilerDraft, task_id: str) -> dict[str, Any
                 "description": fb.get("description", ""),
                 "severity": _to_severity(fb.get("severity", "critical")),
                 "cap_score": float(fb.get("cap_score", 60.0)),
-                "source_text": fb.get("source_text", ""),
+                "source_text": fb.get("source_text", "") or _source_text_for(source_map, source_node_id, fb.get("description", "")),
             }
         )
 
     termination_rules = []
     for t in draft.termination_rules:
+        source_node_id = t.get("source_node_id", "")
         termination_rules.append(
             {
                 "id": _normalize_id(t.get("id", ""), "term.", seq),
                 "name": t.get("name", ""),
                 "condition": t.get("condition", ""),
-                "source_text": t.get("source_text", ""),
+                "source_text": t.get("source_text", "") or _source_text_for(source_map, source_node_id, t.get("condition", "")),
             }
         )
 
@@ -170,11 +239,11 @@ def _draft_to_task_spec(draft: _LLMCompilerDraft, task_id: str) -> dict[str, Any
 
     # faq_facts backwards compat
     faq_facts = []
-    for kf in draft.knowledge_facts:
+    for kf in knowledge_facts:
         if kf.get("fact_type", "faq") == "faq" and kf.get("answer"):
             faq_facts.append(
                 {
-                    "id": _normalize_id(kf.get("id", ""), "faq.", seq),
+                    "id": _normalize_id(str(kf.get("id", "")).replace("kf.", "faq."), "faq.", seq),
                     "question": kf.get("question_patterns", [""])[0] if kf.get("question_patterns") else kf.get("text", ""),
                     "answer": kf.get("answer", ""),
                     "grounding_source": kf.get("source_text", "原文"),
@@ -182,6 +251,7 @@ def _draft_to_task_spec(draft: _LLMCompilerDraft, task_id: str) -> dict[str, Any
                 }
             )
 
+    source_map_json = {key: value.model_dump(mode="json") for key, value in source_map.items()}
     return {
         "task_id": task_id,
         "task_name": draft.task_name,
@@ -192,6 +262,7 @@ def _draft_to_task_spec(draft: _LLMCompilerDraft, task_id: str) -> dict[str, Any
         "flow_nodes": flow_nodes,
         "flow_edges": [],
         "branch_rules": branch_rules,
+        "knowledge_facts": knowledge_facts,
         "faq_facts": faq_facts,
         "constraints": constraints,
         "forbidden_behaviors": forbidden_behaviors,
@@ -202,15 +273,17 @@ def _draft_to_task_spec(draft: _LLMCompilerDraft, task_id: str) -> dict[str, Any
         "risk_guard_statuses": [],
         "risk_coverage_requirements": [],
         "severity_caps": [],
-        "source_text": "",
+        "source_map": source_map_json,
+        "source_text": raw_markdown,
     }
 
 
-def _draft_to_judge_plan(draft: _LLMCompilerDraft, task_id: str) -> JudgePlan:
+def _draft_to_judge_plan(draft: _LLMCompilerDraft, task_id: str, source_map: dict[str, SourceRef]) -> JudgePlan:
     jp_raw = draft.judge_plan
     seq: dict[str, int] = {}
     judge_points = []
     for jp in jp_raw.get("judge_points", []):
+        source_node_id = jp.get("source_node_id", "")
         judge_points.append(
             JudgePoint(
                 id=_normalize_id(jp.get("id", ""), "jp.", seq),
@@ -221,8 +294,8 @@ def _draft_to_judge_plan(draft: _LLMCompilerDraft, task_id: str) -> JudgePlan:
                 fail_criteria=jp.get("fail_criteria", ""),
                 severity=_to_severity(jp.get("severity", "major")),
                 weight=float(jp.get("weight", 1.0)),
-                source_node_id=jp.get("source_node_id", ""),
-                source_text=jp.get("source_text", ""),
+                source_node_id=source_node_id,
+                source_text=jp.get("source_text", "") or _source_text_for(source_map, source_node_id, jp.get("criterion", "")),
                 linked_requirement_ids=jp.get("linked_requirement_ids", []),
                 evaluator=jp.get("evaluator", "llm"),
             )
@@ -269,16 +342,20 @@ def _draft_to_risk_plan(draft: _LLMCompilerDraft, task_id: str) -> RiskPlan:
     return RiskPlan(task_id=task_id, detected_risks=detected, coverage_requirements=reqs)
 
 
-def _draft_to_knowledge_facts(draft: _LLMCompilerDraft) -> list[KnowledgeFact]:
+def _draft_to_knowledge_facts(draft: _LLMCompilerDraft, source_map: dict[str, SourceRef]) -> list[KnowledgeFact]:
     facts = []
+    seq: dict[str, int] = {}
     for kf in draft.knowledge_facts:
+        source_node_id = kf.get("source_node_id", "")
+        text = kf.get("text", "")
+        source_text = kf.get("source_text", "") or _source_text_for(source_map, source_node_id, text)
         facts.append(
             KnowledgeFact(
-                id=kf.get("id", f"kf.{len(facts)+1:03d}"),
-                text=kf.get("text", ""),
+                id=_normalize_id(kf.get("id", ""), "kf.", seq),
+                text=text or source_text[:200],
                 fact_type=kf.get("fact_type", "faq"),
-                source_node_id=kf.get("source_node_id", ""),
-                source_text=kf.get("source_text", ""),
+                source_node_id=source_node_id,
+                source_text=source_text,
                 requirement_ids=kf.get("requirement_ids", []),
                 question_patterns=kf.get("question_patterns", []),
                 answer=kf.get("answer"),
@@ -331,11 +408,21 @@ class LLMTaskCompiler:
         draft: _LLMCompilerDraft = result.parsed
 
         task_id = f"task_{uuid.uuid4().hex[:8]}"
-        task_spec_dict = _draft_to_task_spec(draft, task_id)
-        judge_plan = _draft_to_judge_plan(draft, task_id)
+        source_map = _build_source_map(ast)
+        task_spec_dict = _draft_to_task_spec(draft, task_id, source_map=source_map, raw_markdown=raw_markdown)
+        judge_plan = _draft_to_judge_plan(draft, task_id, source_map)
         risk_plan = _draft_to_risk_plan(draft, task_id)
-        knowledge_facts = _draft_to_knowledge_facts(draft)
+        knowledge_facts = _draft_to_knowledge_facts(draft, source_map)
         findings = _draft_to_findings(draft)
+
+        artifact_source_map = dict(source_map)
+        for req in task_spec_dict.get("requirements", []):
+            artifact_source_map[req["id"]] = _source_ref_for(source_map, req.get("source_section", ""), req.get("source_text", ""))
+        for kf in knowledge_facts:
+            artifact_source_map[kf.id] = _source_ref_for(source_map, kf.source_node_id, kf.source_text)
+        for jp in judge_plan.judge_points:
+            artifact_source_map[jp.id] = _source_ref_for(source_map, jp.source_node_id, jp.source_text)
+        task_spec_dict["source_map"] = {key: value.model_dump(mode="json") for key, value in artifact_source_map.items()}
 
         if result.repaired:
             findings.append(
@@ -347,13 +434,27 @@ class LLMTaskCompiler:
                 )
             )
 
-        return TaskUnderstanding(
+        understanding = TaskUnderstanding(
             task_spec=task_spec_dict,
             judge_plan=judge_plan,
             risk_plan=risk_plan,
-            source_map={},
+            source_map=artifact_source_map,
             compiler_notes=draft.compiler_notes,
             compile_findings=findings,
             knowledge_facts=knowledge_facts,
             raw_instruction=raw_markdown,
         )
+        qa = CompileQAGate().validate(understanding)
+        if qa.findings:
+            understanding.compile_findings.extend(
+                CompileFinding(
+                    code=str(finding.metadata.get("code", "COMPILE_QA")),
+                    message=finding.detail,
+                    severity=finding.severity,
+                    blocking=finding.blocking,
+                    source_node_id=finding.requirement_ref or "",
+                    suggestion=finding.suggested_fix,
+                )
+                for finding in qa.findings
+            )
+        return understanding

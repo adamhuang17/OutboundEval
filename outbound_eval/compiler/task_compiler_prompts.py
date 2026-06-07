@@ -1,7 +1,7 @@
 """LLMTaskCompiler prompt builders.
 
 规则：
-- 不假设固定业务领域，不使用骑手/飞毛腿/直播等词
+- 不假设固定业务领域，不使用任何固定行业词
 - 每个 requirement / knowledge_fact / judge_point 必须引用 source_node_id
 - 如信息不足，输出 compile_findings，不编造
 """
