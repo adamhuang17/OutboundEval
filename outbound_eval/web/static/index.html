@@ -3,103 +3,283 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OutboundEval OS</title>
+  <title>OutboundEval OS — 通用外呼评测操作台</title>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-  <div class="shell">
-    <aside class="rail">
-      <div class="brand">OutboundEval OS</div>
-      <button class="tab active" data-tab="model">模型</button>
-      <button class="tab" data-tab="compile">编译</button>
-      <button class="tab" data-tab="coverage">覆盖</button>
-      <button class="tab" data-tab="runs">运行</button>
-      <button class="tab" data-tab="report">报告</button>
-      <button class="tab" data-tab="replay">回放</button>
-      <button class="tab" data-tab="badcase">Badcase</button>
-      <button class="tab" data-tab="golden">Golden</button>
-    </aside>
-    <main class="workspace">
-      <section id="model" class="panel active">
-        <header><h1>模型配置</h1><button id="testModel">测试连接</button></header>
-        <div class="grid">
-          <label>Base URL<input id="baseUrl" value="https://dashscope.aliyuncs.com/compatible-mode/v1"></label>
-          <label>Model<input id="modelName" value="qwen-turbo"></label>
-          <label>API Key<input id="apiKey" type="password"></label>
-          <label>Temperature<input id="temperature" type="number" step="0.1" value="0.2"></label>
-          <label>Max Tokens<input id="maxTokens" type="number" value="512"></label>
-          <label>Timeout<input id="timeoutSeconds" type="number" value="30"></label>
-        </div>
-        <pre id="modelResult"></pre>
-      </section>
+<div class="shell">
+  <!-- 左侧导航 -->
+  <aside class="rail">
+    <div class="brand">OutboundEval OS</div>
+    <button class="tab active" data-tab="setup">⚙ 配置</button>
+    <button class="tab" data-tab="task">📄 任务编译</button>
+    <button class="tab" data-tab="scenario">🗂 场景构建</button>
+    <button class="tab" data-tab="run">▶ 评测运行</button>
+    <button class="tab" data-tab="report">📊 评测报告</button>
+    <button class="tab" data-tab="import">📥 导入对话</button>
+    <div class="rail-divider"></div>
+    <div class="run-status-badge" id="runBadge" style="display:none"></div>
+  </aside>
 
-      <section id="compile" class="panel">
-        <header><h1>任务编译</h1><button id="compileTask">编译 TaskSpec</button></header>
-        <textarea id="instruction" spellcheck="false"># Role
+  <!-- 主工作区 -->
+  <main class="workspace">
+
+    <!-- ===== 配置页 ===== -->
+    <section id="setup" class="panel active">
+      <div class="page-header">
+        <h1>LLM 配置 &amp; 评测员画像</h1>
+        <p class="sub">必须配置三个 LLM 并全部连接成功，才能进行评测</p>
+      </div>
+
+      <!-- 三模型配置卡 -->
+      <div class="model-grid">
+        <!-- 编译模型 -->
+        <div class="model-card" id="cardCompiler">
+          <div class="model-card-header">
+            <span class="model-role-badge compiler">编译模型</span>
+            <span class="model-status" id="statusCompiler">未测试</span>
+          </div>
+          <p class="model-desc">用于把 Markdown 任务说明编译为 TaskSpec、JudgePlan</p>
+          <div class="model-fields">
+            <label>Base URL<input id="compilerUrl" value="https://dashscope.aliyuncs.com/compatible-mode/v1" placeholder="https://..."></label>
+            <label>Model<input id="compilerModel" value="qwen-turbo" placeholder="gpt-4o / qwen-turbo"></label>
+            <label>API Key<input id="compilerKey" type="password" placeholder="sk-..."></label>
+            <div class="model-row">
+              <label class="inline">Temperature<input id="compilerTemp" type="number" step="0.1" min="0" max="2" value="0.1"></label>
+              <label class="inline">Max Tokens<input id="compilerMaxTokens" type="number" value="4096"></label>
+              <label class="inline">Timeout(s)<input id="compilerTimeout" type="number" value="60"></label>
+            </div>
+          </div>
+          <button class="test-btn" onclick="testSingleModel('compiler')">测试连接</button>
+        </div>
+
+        <!-- 模拟模型 -->
+        <div class="model-card" id="cardSimulator">
+          <div class="model-card-header">
+            <span class="model-role-badge simulator">模拟模型</span>
+            <span class="model-status" id="statusSimulator">未测试</span>
+          </div>
+          <p class="model-desc">驱动用户模拟器（模拟用户角色）和被测对话模型</p>
+          <div class="model-fields">
+            <label>Base URL<input id="simulatorUrl" value="https://dashscope.aliyuncs.com/compatible-mode/v1" placeholder="https://..."></label>
+            <label>Model<input id="simulatorModel" value="qwen-turbo" placeholder="gpt-4o / qwen-turbo"></label>
+            <label>API Key<input id="simulatorKey" type="password" placeholder="sk-..."></label>
+            <div class="model-row">
+              <label class="inline">Temperature<input id="simulatorTemp" type="number" step="0.1" min="0" max="2" value="0.5"></label>
+              <label class="inline">Max Tokens<input id="simulatorMaxTokens" type="number" value="512"></label>
+              <label class="inline">Timeout(s)<input id="simulatorTimeout" type="number" value="30"></label>
+            </div>
+          </div>
+          <button class="test-btn" onclick="testSingleModel('simulator')">测试连接</button>
+        </div>
+
+        <!-- 评判模型 -->
+        <div class="model-card" id="cardJudge">
+          <div class="model-card-header">
+            <span class="model-role-badge judge">评判模型</span>
+            <span class="model-status" id="statusJudge">未测试</span>
+          </div>
+          <p class="model-desc">按 JudgePlan 对完整对话进行语义评分</p>
+          <div class="model-fields">
+            <label>Base URL<input id="judgeUrl" value="https://dashscope.aliyuncs.com/compatible-mode/v1" placeholder="https://..."></label>
+            <label>Model<input id="judgeModel" value="qwen-turbo" placeholder="gpt-4o / qwen-turbo"></label>
+            <label>API Key<input id="judgeKey" type="password" placeholder="sk-..."></label>
+            <div class="model-row">
+              <label class="inline">Temperature<input id="judgeTemp" type="number" step="0.1" min="0" max="2" value="0.1"></label>
+              <label class="inline">Max Tokens<input id="judgeMaxTokens" type="number" value="2048"></label>
+              <label class="inline">Timeout(s)<input id="judgeTimeout" type="number" value="60"></label>
+            </div>
+          </div>
+          <button class="test-btn" onclick="testSingleModel('judge')">测试连接</button>
+        </div>
+      </div>
+
+      <div class="test-all-row">
+        <button class="btn-primary" id="btnTestAll" onclick="testAllModels()">🔌 测试全部连接</button>
+        <div id="testAllResult" class="test-all-result"></div>
+      </div>
+
+      <!-- 评测员画像 -->
+      <div class="persona-section">
+        <h2>评测员画像 <span class="badge-optional">可选但推荐填写</span></h2>
+        <p class="sub">描述模拟用户的身份和特征，越详细场景越贴近真实测试目的</p>
+        <div class="persona-grid">
+          <label>身份描述
+            <input id="pIdentity" placeholder="如：大学生兼职骑手 / 中年男性装修工人">
+          </label>
+          <label>与任务的关系
+            <input id="pRelationship" placeholder="如：刚签约准备接单 / 已合作3年老用户">
+          </label>
+          <label>参与动机
+            <input id="pMotivation" placeholder="如：好奇奖励政策 / 担心合同条款">
+          </label>
+          <label>对话态度
+            <input id="pAttitude" placeholder="如：不耐烦想快点挂电话 / 强势追问">
+          </label>
+          <label>沟通风格
+            <input id="pStyle" placeholder="如：说话简短爱用口语 / 喜欢追问细节">
+          </label>
+          <label>第一句话最关注
+            <input id="pFocus" placeholder="如：先问有没有奖励 / 直接问是不是骗子">
+          </label>
+          <label>决策规则
+            <input id="pDecision" placeholder="如：钱给够就接单 / 先看合同再决定">
+          </label>
+          <label>不便上下文
+            <input id="pInconvenience" placeholder="如：正在开车 / 旁边有人不方便说话">
+          </label>
+          <label class="full">其他备注
+            <input id="pNotes" placeholder="其他补充说明">
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 任务编译页 ===== -->
+    <section id="task" class="panel">
+      <div class="page-header">
+        <h1>任务编译</h1>
+        <div class="btn-row">
+          <button class="btn-primary" id="btnCompileLLM" onclick="compileLLM()">🤖 LLM 编译任务</button>
+        </div>
+      </div>
+      <div class="split-pane">
+        <div class="pane-left">
+          <label class="pane-label">Markdown 任务说明</label>
+          <textarea id="instruction" spellcheck="false" placeholder="# Role
 外呼客服
 
 # Task
-通知骑手飞毛腿合同即将生效，并确认是否可以按要求配送。
+通知用户...
 
 # Opening Line
-您好，我是美团外卖客服，想和您确认飞毛腿合同配送安排。
+您好，我是...
 
 # Call Flow
-1. 先表明身份和来电目的。
-2. 通知合同生效事项。
-3. 确认骑手是否可以配送。
-4. 如果用户正在开车，应提醒安全并礼貌结束。
+1. 表明身份
+2. 说明来意
 
-# Knowledge Points (FAQ)
-Q: 一天需要多少单？
-A: 以 X/Y/Z/W 规则为准，不得自行编造订单数。
+# Knowledge Points
+Q: 问题？
+A: 答案
 
 # Constraints
-- 不得承诺额外奖励。
-- 回复尽量简短。</textarea>
-        <pre id="compileResult"></pre>
-      </section>
-
-      <section id="coverage" class="panel">
-        <header><h1>场景覆盖</h1><button id="planScenarios">生成场景</button></header>
-        <label class="short">Budget<input id="budget" type="number" value="12"></label>
-        <div id="coverageMatrix" class="matrix"></div>
-      </section>
-
-      <section id="runs" class="panel">
-        <header><h1>评测运行</h1><div><button id="startRun">启动 Run</button> <button id="refreshStatus" class="secondary">刷新</button></div></header>
-        <label class="short">Attempts<input id="attempts" type="number" value="1"></label>
-        <pre id="statusResult"></pre>
-      </section>
-
-      <section id="report" class="panel">
-        <header><h1>报告查看</h1><button id="renderReport">渲染报告</button></header>
-        <label>Run ID<input id="reportRunId"></label>
-        <iframe id="reportFrame" title="report"></iframe>
-      </section>
-
-      <section id="replay" class="panel split">
-        <div>
-          <h1>Episode Replay</h1>
-          <div id="turnTimeline" class="timeline"></div>
+- 不得承诺..."></textarea>
         </div>
-        <div>
-          <h1>Judge Evidence</h1>
-          <pre id="judgeEvidence"></pre>
+        <div class="pane-right">
+          <div class="compile-tabs">
+            <button class="ctab active" data-ctab="spec" onclick="switchCompileTab('spec')">TaskSpec</button>
+            <button class="ctab" data-ctab="judge" onclick="switchCompileTab('judge')">JudgePlan</button>
+            <button class="ctab" data-ctab="risk" onclick="switchCompileTab('risk')">RiskPlan</button>
+            <button class="ctab" data-ctab="knowledge" onclick="switchCompileTab('knowledge')">知识点</button>
+            <button class="ctab" data-ctab="findings" onclick="switchCompileTab('findings')">发现</button>
+          </div>
+          <div id="ctab-spec" class="ctab-panel active">
+            <pre id="specResult" class="result-pre">（请先编译任务）</pre>
+          </div>
+          <div id="ctab-judge" class="ctab-panel">
+            <pre id="judgeResult" class="result-pre">（编译后显示 JudgePlan）</pre>
+          </div>
+          <div id="ctab-risk" class="ctab-panel">
+            <pre id="riskResult" class="result-pre">（编译后显示 RiskPlan）</pre>
+          </div>
+          <div id="ctab-knowledge" class="ctab-panel">
+            <div id="knowledgeCards"></div>
+          </div>
+          <div id="ctab-findings" class="ctab-panel">
+            <div id="findingsCards"></div>
+          </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section id="badcase" class="panel">
-        <header><h1>Badcase Library</h1><button id="loadBadcases">加载</button></header>
-        <div id="badcaseList"></div>
-      </section>
+    <!-- ===== 场景构建页 ===== -->
+    <section id="scenario" class="panel">
+      <div class="page-header">
+        <h1>场景构建</h1>
+        <div class="btn-row">
+          <label class="inline">场景数量<input id="scenarioCount" type="number" value="6" min="1" max="20" style="width:60px"></label>
+          <button class="btn-primary" id="btnBuildScenarios" onclick="buildScenarios()">🏗 构建场景</button>
+        </div>
+      </div>
+      <div id="scenarioStatus" class="status-bar"></div>
+      <div id="scenarioCards" class="scenario-grid"></div>
+    </section>
 
-      <section id="golden" class="panel">
-        <header><h1>Golden Set</h1><button id="seedGolden">生成样例</button></header>
-        <pre id="goldenResult"></pre>
-      </section>
-    </main>
-  </div>
-  <script src="/static/app.js"></script>
+    <!-- ===== 评测运行页 ===== -->
+    <section id="run" class="panel">
+      <div class="page-header">
+        <h1>评测运行</h1>
+        <div class="btn-row">
+          <button class="btn-primary" id="btnStartRun" onclick="startRun()">▶ 开始评测</button>
+        </div>
+      </div>
+
+      <!-- 运行进度 -->
+      <div id="runProgressBar" class="progress-bar" style="display:none">
+        <div id="runProgressFill" class="progress-fill"></div>
+      </div>
+      <div id="runStageInfo" class="stage-info"></div>
+
+      <!-- IM 聊天区（实时显示） -->
+      <div class="chat-workspace">
+        <div class="chat-sidebar">
+          <div class="chat-sidebar-header">场景进度</div>
+          <div id="chatScenarioList"></div>
+        </div>
+        <div class="chat-main">
+          <div class="chat-episode-header" id="chatEpisodeHeader">等待运行...</div>
+          <div class="chat-messages" id="chatMessages"></div>
+          <div class="chat-typing" id="chatTyping" style="display:none">
+            <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 评测报告页 ===== -->
+    <section id="report" class="panel">
+      <div class="page-header">
+        <h1>评测报告</h1>
+        <div class="btn-row">
+          <button class="btn-secondary" id="btnExportReport" onclick="exportReport()" style="display:none">⬇ 导出 JSON</button>
+          <button class="btn-secondary" id="btnExportHtml" onclick="exportReportHtml()" style="display:none">⬇ 导出 HTML</button>
+        </div>
+      </div>
+      <div id="reportContent">
+        <div class="empty-state">运行完评测后，报告将在这里显示。</div>
+      </div>
+    </section>
+
+    <!-- ===== 导入对话页 ===== -->
+    <section id="import" class="panel">
+      <div class="page-header">
+        <h1>导入对话</h1>
+        <p class="sub">导入已有对话 JSON 进行评分，或下载导入模板</p>
+      </div>
+      <div class="import-actions">
+        <button class="btn-secondary" onclick="downloadTemplate()">⬇ 下载导入模板</button>
+      </div>
+      <div class="split-pane" style="margin-top:16px">
+        <div class="pane-left">
+          <label class="pane-label">粘贴对话 JSON</label>
+          <textarea id="importJson" spellcheck="false" placeholder="粘贴符合模板格式的 JSON..."></textarea>
+          <div class="import-btn-row">
+            <button class="btn-primary" onclick="importConversation()">📥 导入</button>
+            <button class="btn-secondary" onclick="rejudgeImported()" id="btnRejudge" style="display:none;margin-left:12px">⚖ 重新评分</button>
+          </div>
+        </div>
+        <div class="pane-right">
+          <div class="pane-label">导入结果</div>
+          <pre id="importResult" class="result-pre">（等待导入...）</pre>
+          <div id="importJudgeResult" style="margin-top:16px"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="/static/app.js"></script>
 </body>
 </html>
