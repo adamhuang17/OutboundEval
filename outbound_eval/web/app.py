@@ -37,6 +37,7 @@ from outbound_eval.planner import CoveragePlanner
 from outbound_eval.planner.scenario_planner_llm import ScenarioPlannerLLM
 from outbound_eval.planner.scenario_builder_llm import ScenarioBuilderLLM
 from outbound_eval.planner.scenario_qa import ScenarioQAGate
+from outbound_eval.planner.scenario_repair import ScenarioRepairService
 from outbound_eval.simulator.dialogue_manager import DialogueManager
 from outbound_eval.evaluator.evidence_mapper import EvidenceMapper
 from outbound_eval.evaluator.finding_aggregator import FindingAggregator
@@ -513,12 +514,15 @@ async def build_scenarios(request: BuildScenariosRequest):
             model_config=request.llm_config,
             plan=plan,
         )
+        repair = ScenarioRepairService().repair(understanding, scenario_set, plan=plan)
+        scenario_set = repair.scenario_set
         scenario_qa = ScenarioQAGate().validate(understanding, scenario_set)
         return {
             "ok": scenario_qa.passed,
             "scenario_plan": plan.model_dump(mode="json"),
             "scenario_set": scenario_set.model_dump(mode="json"),
             "scenario_qa": scenario_qa.model_dump(mode="json"),
+            "scenario_repair": repair.report.model_dump(mode="json"),
             "error": None if scenario_qa.passed else "ScenarioQAGate blocked this scenario set.",
         }
     except Exception as exc:
@@ -546,9 +550,19 @@ async def run_start(request: StartRunRequest):
 
             scenarios = [LLMScenarioSpec.model_validate(item) for item in request.scenarios]
             scenario_set = ScenarioSet(task_id=understanding.task_spec.get("task_id", "task_unknown"), scenarios=scenarios)
+            repair = ScenarioRepairService().repair(understanding, scenario_set)
+            scenario_set = repair.scenario_set
+            scenarios = scenario_set.scenarios
             scenario_qa = ScenarioQAGate().validate(understanding, scenario_set)
             if not scenario_qa.passed:
-                await _push({"type": "error", "error": "ScenarioQAGate blocked this run.", "scenario_qa": scenario_qa.model_dump(mode="json")})
+                await _push(
+                    {
+                        "type": "error",
+                        "error": "ScenarioQAGate blocked this run.",
+                        "scenario_qa": scenario_qa.model_dump(mode="json"),
+                        "scenario_repair": repair.report.model_dump(mode="json"),
+                    }
+                )
                 return
 
             await _push({"type": "stage", "stage": "run_ready", "message": f"场景数量: {len(scenarios)}"})
@@ -644,6 +658,7 @@ async def run_start(request: StartRunRequest):
                 "judge_results": [r.model_dump() for r in all_judge_results],
                 "judge_plan": understanding.judge_plan.model_dump(mode="json"),
                 "scenario_qa": scenario_qa.model_dump(mode="json"),
+                "scenario_repair": repair.report.model_dump(mode="json"),
                 "knowledge_facts": [kf.model_dump() for kf in understanding.knowledge_facts],
                 "source_map": {key: value.model_dump(mode="json") for key, value in understanding.source_map.items()},
                 "target_payloads": all_target_payloads,
